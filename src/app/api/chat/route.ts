@@ -38,10 +38,40 @@ Q: "dinner time" A: "4-8pm"
 Q: "how to get there" A: "taxi to Todomar Marina, boat picks you up"
 Q: "thanks" A: "np!"
 
-MENU PRICES:
-Food: empanadas 22k, burgers 35-52k, sandwiches 44k, fish plates 65-180k
-Drinks: cocktails 44k, beer 22k, wine 35k, bottles 140-700k
-Specials: lobster 180k, coconut fish 75k
+FULL MENU:
+FOOD:
+- Empanadas 22k, Patacones 22k, Cassava Croquettes 22k
+- Chicken Sandwich 44k, Turkey Ham Cheese 44k
+- Vegan Burger 35k, Beef Burger 52k
+- Veggie Wraps 52k, Buddha Bowl 52k, Hot Dog 35k
+
+DRINKS:
+- Soda 8.7k, Juice 13k, Water 8k, Unlimited water 20k
+- Beer 22k, Wine glass 35k
+- ALL cocktails 44k (mojito, margarita, cuba libre, g&t, moscow mule)
+- Shots 30k, Premium shots 44k, Premium drinks 61k
+
+BOTTLES:
+- Tequila: Olmeca 200k, 1800 540k, Patron 580k, Don Julio 620k, Casamigos 700k
+- Vodka: Absolut 220k, Titos 440k, Grey Goose 500k
+- Whiskey: Black&White 180k, Jack 460k, Jameson 440k
+- Rum: Bandoleros 140k, Ron Medellin 160k, La Hechicera 500k
+- Hennessy 700k, Hendricks 560k
+- Wine bottles 100-120k, Sparkling 160-180k
+
+SPECIALS (a la carte):
+- Caribbean Lobster 180k
+- Coconut Fish 75k
+- Island Beef 65k
+- Grilled Chicken 65k
+
+4-COURSE PRIVATE DINNERS:
+- "Cartagena Culture" 235k/person: ceviche, garlic shrimp, braised beef, enyucado
+- "Sunset Flavors" 200k/person: watermelon salad, arepas, grilled fish, passionfruit mousse
+- "Jungle Soul" 170k/person: corn soup, yuca bites, veggie stir-fry, plantains chocolate
+
+BRUNCH (Village People):
+Bottomless mimosas + bottomless tapas (mini burgers, fried chicken, waffles, shrimp, empanadas). Contact for group pricing.
 
 OPERATIONS:
 Check-in 3pm, checkout 11am
@@ -70,7 +100,7 @@ No ATMs on island, bring cash. TVC takes cards only.`;
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
-        max_tokens: 60, // Very short
+        max_tokens: 100, // Short but can give details when asked
         system: systemPrompt,
         messages,
       }),
