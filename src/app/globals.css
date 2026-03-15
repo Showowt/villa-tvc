@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TVC Design System */
+:root {
+  /* Caribbean Colors */
+  --tvc-void: #0a1628;
+  --tvc-deep: #0f2847;
+  --tvc-ocean: #1a4a7a;
+  --tvc-turquoise: #40b8c4;
+  --tvc-sand: #f5e6d3;
+  --tvc-gold: #d4a574;
+  --tvc-coral: #e8a87c;
+  --tvc-palm: #2d5016;
+  --tvc-white: #ffffff;
+
+  /* Admin Colors */
+  --admin-bg: #0f0f1a;
+  --admin-surface: #1a1a2e;
+  --admin-border: #2a2a4a;
+  --admin-gold: #d4af37;
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--admin-bg);
+  color: var(--tvc-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+.font-display {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+/* Chat bubbles */
+.chat-bubble-guest {
+  background: var(--tvc-turquoise);
+  color: var(--tvc-void);
+  border-radius: 18px 18px 4px 18px;
+}
+
+.chat-bubble-villa {
+  background: var(--admin-surface);
+  color: var(--tvc-white);
+  border-radius: 18px 18px 18px 4px;
+  border: 1px solid var(--admin-border);
+}
+
+.chat-bubble-staff {
+  background: var(--admin-gold);
+  color: var(--tvc-void);
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* Status indicators */
+.status-active {
+  background: #22c55e;
+}
+
+.status-escalated {
+  background: #ef4444;
+}
+
+.status-resolved {
+  background: #3b82f6;
+}
+
+.status-closed {
+  background: #6b7280;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--admin-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--admin-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tvc-ocean);
+}
+
+/* Animations */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Focus states */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--tvc-turquoise);
+  box-shadow: 0 0 0 2px rgba(64, 184, 196, 0.2);
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--tvc-turquoise);
+  color: var(--tvc-void);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #35a0aa;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--admin-surface);
+  color: var(--tvc-white);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--admin-border);
+}
+
+.btn-gold {
+  background: var(--admin-gold);
+  color: var(--tvc-void);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.btn-gold:hover {
+  background: #c9a030;
+}
+
+/* Cards */
+.card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.card-hover:hover {
+  border-color: var(--tvc-turquoise);
+  transform: translateY(-2px);
+  transition: all 0.2s;
+}
+
+/* Table styles */
+.table-row {
+  border-bottom: 1px solid var(--admin-border);
+  transition: background 0.2s;
+}
+
+.table-row:hover {
+  background: rgba(64, 184, 196, 0.05);
+}
+
+/* Badge styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.badge-warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
