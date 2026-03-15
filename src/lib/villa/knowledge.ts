@@ -154,30 +154,53 @@ export const TVC_KNOWLEDGE = {
   },
 
   // ==========================================
-  // AMENITIES
+  // AMENITIES - Full list from Cloudbeds
   // ==========================================
   amenities: {
     included: [
-      { name: "Lounge", description: "Relaxing common area" },
-      {
-        name: "Mirador (View)",
-        description: "360-degree rooftop terrace with panoramic views",
-      },
-      {
-        name: "Bar",
-        description: "Full-service bar with drinks delivered to your villa",
-      },
+      { name: "Swimming Pool", description: "Beautiful outdoor pool" },
+      { name: "Hot Tub / Jacuzzi", description: "Relaxing hot tub" },
+      { name: "Beach", description: "2-minute walk to beach" },
+      { name: "Beach Chairs/Loungers", description: "Poolside relaxation" },
+      { name: "Solarium", description: "Sun deck area" },
       {
         name: "Restaurant",
         description: "Tia's Kitchen & Bar - Caribbean cuisine",
       },
-      { name: "Pool", description: "Beautiful outdoor pool" },
-      { name: "Gym", description: "On-property fitness center" },
+      { name: "Bar", description: "Full-service bar" },
+      { name: "Free Breakfast", description: "Complimentary daily breakfast" },
+      { name: "Bottled Water", description: "Available for purchase" },
+      { name: "WiFi", description: "Wireless internet throughout property" },
+      { name: "Air Conditioning", description: "In villas" },
+      { name: "Concierge", description: "Guest services" },
+      { name: "Tour Assistance", description: "Help booking excursions" },
       {
-        name: "Boat Transport",
-        description: "Scheduled boat service to/from Cartagena",
+        name: "Baggage Storage",
+        description: "Store luggage before/after checkout",
       },
-      { name: "WiFi", description: "Available throughout the property" },
+      { name: "24-Hour Front Desk", description: "Always staffed" },
+      { name: "Daily Housekeeping", description: "Room cleaning service" },
+      { name: "Safety Deposit Box", description: "Secure storage" },
+      { name: "Outdoor Furniture", description: "Common area seating" },
+      { name: "Terrace", description: "Outdoor terrace areas" },
+      { name: "Boating", description: "Boat services available" },
+      { name: "Tours", description: "Various excursion options" },
+      { name: "Happy Hour", description: "Daily specials" },
+    ],
+    accessibility: ["Property has wheelchair access"],
+    safety_security: [
+      "24-hour security",
+      "CCTV in common areas",
+      "CCTV outside property",
+    ],
+    health_hygiene: [
+      "Cashless payment accepted",
+      "First aid kits available",
+      "Hand sanitizer provided",
+    ],
+    sustainability: [
+      "Guests can opt out of daily room cleaning",
+      "Towels changed upon request",
     ],
     pool_rules: {
       hours: "7:00 AM - 10:00 PM",
@@ -186,12 +209,6 @@ export const TVC_KNOWLEDGE = {
         "Please shower before entering the pool to help keep the water clean",
       ],
     },
-    villa_features: [
-      "Natural cross-breezes and powerful industrial fans keep villas comfortable",
-      "Portable air conditioners available upon request",
-      "No hot water - refreshing, climate-temperature showers (eco-friendly)",
-      "Towels are not changed daily unless requested (help us stay eco-friendly)",
-    ],
   },
 
   // ==========================================
@@ -208,18 +225,58 @@ export const TVC_KNOWLEDGE = {
   },
 
   // ==========================================
-  // VILLAS
+  // VILLAS - Accurate from Cloudbeds
   // ==========================================
   villas: {
     total_units: 10,
     description:
-      "10 beautifully designed Tiny Houses inspired by Cartagena's Spanish Colonial architecture",
-    features: [
-      "High ceilings with natural airflow",
-      "Powerful industrial fans",
-      "Portable AC available on request",
-      "Private patios",
-      "Artisanal Caribbean coast interior design",
+      "10 beautifully designed Tiny Houses inspired by Cartagena's Spanish Colonial architecture, each with unique wall murals representative of Cartagena's iconic street art.",
+    types: {
+      garden_view: {
+        name: "Garden View Tiny Villa",
+        capacity: 4,
+        size: "26m² (two story)",
+        beds: "Two double beds",
+        features: [
+          "Private shower and toilet",
+          "Beautiful private back patio with water views",
+          "Unique wall mural (Cartagena street art style)",
+          "Two story layout",
+        ],
+        amenities: ["220-240 volt circuits", "Ceiling fan", "WiFi"],
+      },
+      deluxe: {
+        name: "Deluxe Tiny Villa",
+        capacity: 5,
+        description:
+          "Experience Cartagena's renowned Spanish colonial architecture. Built with restored wood from the iconic Teatro Colon.",
+        beds: "Two double beds + sofa bed",
+        features: [
+          "Extra spacious layout",
+          "Private back patio",
+          "Stylish living room with incredible wall mural",
+          "Separate loft upstairs",
+          "Artisanal crafts from Colombia's Caribbean Coast",
+          "Bathroom with 3 separate areas (sink, bathing, toilet)",
+        ],
+        amenities: [
+          "110-120 volt circuits",
+          "Ceiling fan",
+          "Easily accessible outlets",
+          "Eco-friendly bathroom amenities",
+          "Hair dryer (upon request)",
+          "In-room safe",
+          "Iron/ironing board (upon request)",
+          "Private patio",
+          "WiFi",
+        ],
+      },
+    },
+    common_features: [
+      "Natural cross-breezes and powerful industrial fans",
+      "Portable air conditioners available upon request",
+      "No hot water - refreshing, climate-temperature showers (eco-friendly)",
+      "Towels not changed daily unless requested (eco-friendly)",
     ],
   },
 

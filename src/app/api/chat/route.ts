@@ -141,6 +141,30 @@ Leave at golden hour, cocktails on the water, watch the sun set over Cartagena s
 NIGHTLIFE EXPERIENCE:
 Boat to Cartagena at 7:30pm, party in the city (Cafe Havana for salsa!), boat back at midnight. Best of both worlds.
 
+=== VILLAS (ACCURATE INFO) ===
+We have 10 Tiny Villas inspired by Cartagena's Spanish colonial architecture, each with unique wall murals.
+
+GARDEN VIEW TINY VILLA:
+- Sleeps up to 4 guests
+- Two double beds
+- 26m2, two-story layout
+- Private shower & toilet
+- Private back patio with water views
+- Amenities: 220-240 volt circuits, ceiling fan, WiFi
+
+DELUXE TINY VILLA:
+- Sleeps up to 5 guests
+- Two double beds + sofa bed
+- Extra spacious with separate loft upstairs
+- Built with restored wood from Teatro Colon
+- Private back patio + stylish living room
+- Bathroom with 3 separate areas (sink, shower, toilet)
+- Amenities: 110-120 volt circuits, ceiling fan, in-room safe, hair dryer on request, iron on request, eco-friendly amenities, WiFi
+
+ALL VILLAS: Natural cross-breezes, powerful fans, portable AC available on request, no hot water (refreshing climate-temp showers), free WiFi
+
+PROPERTY AMENITIES: Pool, hot tub/jacuzzi, beach (2 min walk), beach chairs, restaurant, bar, FREE breakfast included, 24-hour front desk, daily housekeeping, concierge, tour assistance, wheelchair access, 24-hour security
+
 === BOATS ===
 - Local lanchas: 50K (authentic local experience)
 - Pescadito (7 guests): 200K one-way - intimate, stylish

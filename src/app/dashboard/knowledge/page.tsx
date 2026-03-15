@@ -37,6 +37,14 @@ export default function KnowledgePage() {
             />
 
             <KnowledgeSection
+              title="Villa Types"
+              items={[
+                `Garden View: ${TVC_KNOWLEDGE.villas.types.garden_view.capacity} guests, ${TVC_KNOWLEDGE.villas.types.garden_view.beds}`,
+                `Deluxe: ${TVC_KNOWLEDGE.villas.types.deluxe.capacity} guests, ${TVC_KNOWLEDGE.villas.types.deluxe.beds}`,
+              ]}
+            />
+
+            <KnowledgeSection
               title="Amenities"
               items={TVC_KNOWLEDGE.amenities.included.map((a) => a.name)}
             />
