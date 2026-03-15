@@ -30,18 +30,9 @@ export default function KnowledgePage() {
               items={[
                 `Name: ${TVC_KNOWLEDGE.property.name}`,
                 `Location: ${TVC_KNOWLEDGE.property.location}`,
-                `Founded: ${TVC_KNOWLEDGE.property.founded}`,
-                `Villas: ${TVC_KNOWLEDGE.villas.total_units} units, ${TVC_KNOWLEDGE.villas.total_beds} beds`,
-                `Capacity: ${TVC_KNOWLEDGE.villas.max_capacity} guests`,
-              ]}
-            />
-
-            <KnowledgeSection
-              title="Villa Types"
-              items={[
-                `Garden View (${TVC_KNOWLEDGE.villas.types.garden_view.units} units)`,
-                `Deluxe (${TVC_KNOWLEDGE.villas.types.deluxe.units} units)`,
-                `ADA Accessible (${TVC_KNOWLEDGE.villas.types.ada_accessible.units} unit)`,
+                `Villas: ${TVC_KNOWLEDGE.villas.total_units} units`,
+                `Check-in: ${TVC_KNOWLEDGE.operations.check_in}`,
+                `Check-out: ${TVC_KNOWLEDGE.operations.check_out}`,
               ]}
             />
 
@@ -53,8 +44,18 @@ export default function KnowledgePage() {
             <KnowledgeSection
               title="Boats"
               items={[
-                `${TVC_KNOWLEDGE.boats.colibri_one.name} - ${TVC_KNOWLEDGE.boats.colibri_one.capacity}`,
-                `${TVC_KNOWLEDGE.boats.pescadito.name} - ${TVC_KNOWLEDGE.boats.pescadito.capacity}`,
+                `${TVC_KNOWLEDGE.boats.tvc_boating.colibri_one.name} - up to ${TVC_KNOWLEDGE.boats.tvc_boating.colibri_one.capacity_islands} guests`,
+                `${TVC_KNOWLEDGE.boats.tvc_boating.pescadito.name} - up to ${TVC_KNOWLEDGE.boats.tvc_boating.pescadito.capacity_bay} guests`,
+                `Local Lancha - ${TVC_KNOWLEDGE.boats.local_boat.price_note}`,
+              ]}
+            />
+
+            <KnowledgeSection
+              title="Boat Schedule"
+              items={[
+                `To TVC: ${TVC_KNOWLEDGE.boats.schedule.cartagena_to_tvc.join(", ")}`,
+                `To Cartagena: ${TVC_KNOWLEDGE.boats.schedule.tvc_to_cartagena.join(", ")}`,
+                `Nightlife: ${TVC_KNOWLEDGE.boats.schedule.nightlife_experience.departure}`,
               ]}
             />
           </div>
@@ -75,27 +76,17 @@ export default function KnowledgePage() {
               items={[
                 `Timezone: ${CARTAGENA_KNOWLEDGE.overview.timezone}`,
                 `Currency: ${CARTAGENA_KNOWLEDGE.overview.currency}`,
-                `Best Time: ${CARTAGENA_KNOWLEDGE.overview.best_time_to_visit}`,
+                `Language: ${CARTAGENA_KNOWLEDGE.overview.language}`,
               ]}
             />
 
             <KnowledgeSection
-              title="Neighborhoods"
-              items={Object.values(CARTAGENA_KNOWLEDGE.neighborhoods).map(
-                (n) => `${n.name} - ${n.vibe}`,
-              )}
-            />
-
-            <KnowledgeSection
-              title="Must-Try Foods"
-              items={CARTAGENA_KNOWLEDGE.food_and_drink.must_try
-                .slice(0, 6)
-                .map((f) => f.name)}
-            />
-
-            <KnowledgeSection
-              title="Day Trips"
-              items={CARTAGENA_KNOWLEDGE.day_trips.map((t) => t.name)}
+              title="Immigration"
+              items={[
+                CARTAGENA_KNOWLEDGE.immigration.visa,
+                CARTAGENA_KNOWLEDGE.immigration.passport,
+                CARTAGENA_KNOWLEDGE.immigration.customs,
+              ]}
             />
 
             <KnowledgeSection
@@ -103,6 +94,11 @@ export default function KnowledgePage() {
               items={CARTAGENA_KNOWLEDGE.nightlife.hotspots.map(
                 (h) => `${h.name} (${h.type})`,
               )}
+            />
+
+            <KnowledgeSection
+              title="Safety Tips"
+              items={CARTAGENA_KNOWLEDGE.safety.tips.slice(0, 4)}
             />
           </div>
         </div>
@@ -119,17 +115,17 @@ export default function KnowledgePage() {
           <div className="space-y-4">
             <KnowledgeSection
               title="TVC Experiences"
-              items={[
-                TVC_KNOWLEDGE.experiences.culture_trips.name,
-                TVC_KNOWLEDGE.experiences.private_parties.name,
-                TVC_KNOWLEDGE.experiences.bottomless_brunch.name,
-                TVC_KNOWLEDGE.experiences.private_dinner.name,
-              ]}
+              items={TVC_KNOWLEDGE.experiences.map((e) => e.name)}
             />
 
             <KnowledgeSection
-              title="Excursions"
-              items={TVC_KNOWLEDGE.excursions}
+              title="Nearby Adventures"
+              items={TVC_KNOWLEDGE.nearby.adventures.map((a) => a.name)}
+            />
+
+            <KnowledgeSection
+              title="Local Villages"
+              items={TVC_KNOWLEDGE.nearby.local_villages.map((v) => v.name)}
             />
           </div>
         </div>
@@ -147,20 +143,34 @@ export default function KnowledgePage() {
             <KnowledgeSection
               title="TVC Contact"
               items={[
-                `Phone: ${TVC_KNOWLEDGE.contact.phone}`,
-                `Hours: ${TVC_KNOWLEDGE.contact.hours}`,
+                `WhatsApp: ${TVC_KNOWLEDGE.contact.whatsapp}`,
+                `Email: ${TVC_KNOWLEDGE.contact.email}`,
                 `Website: ${TVC_KNOWLEDGE.contact.website}`,
-                `Airport: ${TVC_KNOWLEDGE.contact.airport}`,
-                `Dock: ${TVC_KNOWLEDGE.contact.dock}`,
               ]}
             />
 
             <KnowledgeSection
-              title="Emergency Numbers"
+              title="Restaurant Hours"
               items={[
-                `Police: ${CARTAGENA_KNOWLEDGE.safety.emergency.police}`,
-                `Ambulance: ${CARTAGENA_KNOWLEDGE.safety.emergency.ambulance}`,
-                `Tourist Police: ${CARTAGENA_KNOWLEDGE.safety.emergency.tourist_police}`,
+                `Breakfast: ${TVC_KNOWLEDGE.restaurant.hours.breakfast}`,
+                `Lunch: ${TVC_KNOWLEDGE.restaurant.hours.lunch}`,
+                `Dinner: ${TVC_KNOWLEDGE.restaurant.hours.dinner}`,
+              ]}
+            />
+
+            <KnowledgeSection
+              title="Payments"
+              items={[
+                TVC_KNOWLEDGE.payments.at_tvc,
+                TVC_KNOWLEDGE.payments.on_island,
+              ]}
+            />
+
+            <KnowledgeSection
+              title="Pool Hours"
+              items={[
+                `Hours: ${TVC_KNOWLEDGE.amenities.pool_rules.hours}`,
+                ...TVC_KNOWLEDGE.amenities.pool_rules.rules,
               ]}
             />
           </div>

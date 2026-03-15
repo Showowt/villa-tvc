@@ -1,5 +1,6 @@
 // ============================================
 // VILLA TVC - Complete Knowledge Base
+// Updated from Official Welcome Guide 2025
 // ============================================
 
 export const TVC_KNOWLEDGE = {
@@ -11,18 +12,14 @@ export const TVC_KNOWLEDGE = {
     nickname: "TVC",
     location: "Isla Tierra Bomba, Cartagena, Colombia",
     description:
-      "A one-of-a-kind boutique eco-resort featuring 10 beautifully designed Tiny Villas built using materials from 200-year-old Colonial homes, including doors and windows from the historic Teatro Colón.",
-    founded: "2016/2017 by Akil King",
-    launched: "2023",
-    distance_from_city: "15 minutes by boat from Cartagena city center",
+      "A boutique resort with 10 beautifully designed Tiny Houses inspired by Cartagena's Spanish Colonial architecture. Located on Tierra Bomba Island, less than 15 minutes by boat from Cartagena's city center, offering the perfect mix of privacy and convenience.",
     philosophy:
-      "Fuse tiny house design principles with Spanish Colonial aesthetic to create the world's most thoughtfully designed tiny house resort.",
+      "At Tiny Village Cartagena we aim to build an island getaway that incorporates everything that makes Cartagena special from its architectural design, to its culture to its cuisine. Our Tiny Villas are stand alone structures which incorporate Tiny house design principles to afford maximum space and comfort per square foot, while still ensuring that the energy consumption of each Villa is environmentally responsible.",
     eco_features: [
-      "Solar power system (entire property)",
-      "Reclaimed 200-year-old Colonial materials",
-      "Tiny house design minimizes energy consumption",
-      "Natural airflow design reduces need for AC",
-      "Eco-leisure philosophy: good time + doing good for the world",
+      "Connected to island's main power grid with solar backup system",
+      "Natural cross-breezes and industrial fans reduce AC need",
+      "Eco-friendly approach: towels not changed daily unless requested",
+      "Climate-temperature showers to reduce energy and environmental impact",
     ],
   },
 
@@ -30,73 +27,130 @@ export const TVC_KNOWLEDGE = {
   // CONTACT INFORMATION
   // ==========================================
   contact: {
-    phone: "(+57) 316 055 1387",
-    whatsapp: "+573160551387",
-    hours: "Monday–Sunday, 8am–8pm",
+    phone: "+57 316 055 1387",
+    whatsapp: "+57 316 055 1387",
+    email: "info@tinyvillagecolombia.com",
     website: "www.tinyvillagecartagena.com",
     booking_url: "https://hotels.cloudbeds.com/en/reservation/cNQMGh",
-    airport: "Rafael Nuñez International Airport (CTG)",
-    dock: "Muelle Pegasus",
+    note: "Cell service on the island can be spotty, but WiFi is available at the hotel. WhatsApp is the best way to communicate.",
   },
 
   // ==========================================
-  // VILLA TYPES
+  // GETTING HERE
   // ==========================================
-  villas: {
-    total_units: 10,
-    total_beds: 19,
-    max_capacity: 42,
-    common_features: [
-      "15-foot ceilings for amazing natural airflow",
-      "Split-level design with bedroom loft and main living area",
-      "Two double beds (sleep up to 4 guests)",
-      "Fully functional living room",
-      "Private patio (~10ft x 10ft)",
-      "Smart bathroom: shower, toilet, sink in independent spaces",
-      "Ample storage (closets and drawers)",
-      "Custom life-sized wall murals depicting Cartagena culture",
-      "Artisanal interior design from Colombia's Caribbean coast",
-    ],
-    types: {
-      garden_view: {
-        name: "Garden View Villa",
-        units: 5,
+  getting_here: {
+    taxi_from_airport: {
+      cost: "30,000 - 40,000 COP",
+      note: "Taxis available at the airport to our pick-up points",
+    },
+    private_transfer: {
+      cost: "40,000 COP for small groups (up to 5 people)",
+      contact:
+        "WhatsApp +57 316 055 1387 or email info@tinyvillagecolombia.com",
+    },
+    pickup_points: {
+      local_boats: {
+        name: "Behind Bocagrande Hospital (Nuevo Hospital de Bocagrande)",
         description:
-          "Second-largest villa type with courtyard view and beautiful back patio. Perfect for guests seeking a serene, garden-facing retreat.",
-        features: [
-          "Two double beds",
-          "Bathroom",
-          "Living room",
-          "Back patio with garden view",
-        ],
+          "Departure point for local lanchas - authentic island experience",
+        google_maps: "Search: Behind Bocagrande Hospital",
       },
-      deluxe: {
-        name: "Deluxe Villa",
-        units: 4,
-        description:
-          "Largest Tiny Villas in square footage and ceiling height. Features incredible artisanal interior with antique items from Colombia's Caribbean coast towns. The most premium option.",
-        features: [
-          "Two double beds",
-          "Sofa bed",
-          "Bathroom",
-          "Patio",
-          "Highest ceilings",
-          "Premium antique decor",
-        ],
-      },
-      ada_accessible: {
-        name: "ADA Accessible Villa",
-        units: 1,
-        description:
-          "Beautifully designed one-story villa for guests with special needs or wheelchair users. Fully accessible. TVC believes every guest deserves the magic.",
-        features: [
-          "Single-story design",
-          "Wheelchair accessible",
-          "Modified layout for accessibility",
-          "Full amenities",
-        ],
+      tvc_boating: {
+        name: "Todomar Marina, Bocagrande",
+        description: "Departure point for TVC Boating premium experience",
+        google_maps: "Search: Todomar Marina Bocagrande",
       },
     },
+    boat_ride: "Less than 15 minutes - short, scenic ride across the bay",
+    complimentary_transfers:
+      "Guests who book directly with us or through our website enjoy complimentary check-in and check-out boat transfers",
+  },
+
+  // ==========================================
+  // BOAT TRANSPORTATION
+  // ==========================================
+  boats: {
+    local_boat: {
+      name: "Local Lancha",
+      departure: "Beach behind Bocagrande Hospital",
+      description:
+        "Safe, lively option operated by local islanders. Direct connection to the culture and rhythm of Tierra Bomba.",
+      price_one_way: 50000,
+      price_note: "50,000 COP per trip",
+    },
+    tvc_boating: {
+      description:
+        "Enjoy a smooth and stylish ride across the bay with comfort, views, and Caribbean breezes.",
+      pescadito: {
+        name: "Pescadito",
+        length: "19 Feet",
+        capacity_islands: 6,
+        capacity_bay: 8,
+        capacity_note: "Luxury boat for up to 7 guests",
+        engines: "Two 50Hp Yamaha Engines",
+        features: [
+          "Sound System (Bluetooth Enabled)",
+          "Party Lights",
+          "Cooler with Ice",
+          "Sunbathing Area",
+        ],
+        price_one_way: 200000,
+        price_round_trip: 300000,
+      },
+      colibri_one: {
+        name: "Colibri One",
+        length: "39 Feet",
+        capacity_islands: 20,
+        capacity_bay: 22,
+        capacity_note: "Elegant mini yacht for up to 20 guests",
+        engines: "Two 350Hp Yamaha Engines",
+        features: [
+          "Sound System (Bluetooth Enabled)",
+          "2 Levels",
+          "Bathroom",
+          "Shower",
+          "Party Lights",
+          "Wet Bar",
+          "Cooler with Ice",
+          "Sunbathing Area",
+        ],
+        price_one_way: 450000,
+        price_round_trip: 750000,
+      },
+    },
+    destinations: [
+      "Rosario Islands",
+      "Baru",
+      "Sunset Tours",
+      "Tierra Bomba",
+      "Special Events",
+    ],
+    schedule: {
+      cartagena_to_tvc: ["3:00 PM (Daily)", "6:30 PM (Daily)"],
+      tvc_to_cartagena: ["8:00 AM (Daily)", "11:00 AM (Daily)"],
+      nightlife_experience: {
+        departure: "7:30 PM from Tiny Village Cartagena",
+        return: "12:00 AM from Cartagena to TVC",
+        note: "Return after 12am is possible, additional fees apply",
+        description:
+          "Set sail on our boats at night, dive into Cartagena's vibrant nightlife, and return after an unforgettable party under the city lights.",
+      },
+      flexible:
+        "Need a ride outside these hours? Just reach out to us, and we'll see what we can do. We're pretty good at making things happen!",
+    },
+  },
+
+  // ==========================================
+  // HOTEL OPERATIONS
+  // ==========================================
+  operations: {
+    check_in: "From 3:00 PM",
+    check_out: "By 11:00 AM",
+    late_checkout:
+      "Let us know in advance, and we'll try to accommodate based on availability (extra charge may apply)",
+    security: "24/7 on-site staff and security cameras",
+    emergency:
+      "Bocagrande Hospital is just a 10-minute boat ride away. Emergency medical services are available on the island.",
   },
 
   // ==========================================
@@ -104,254 +158,134 @@ export const TVC_KNOWLEDGE = {
   // ==========================================
   amenities: {
     included: [
+      { name: "Lounge", description: "Relaxing common area" },
       {
-        name: "Complimentary Breakfast",
-        description: "Start every day right. Breakfast included in every stay.",
+        name: "Mirador (View)",
+        description: "360-degree rooftop terrace with panoramic views",
       },
       {
-        name: "Full-Service Restaurant",
-        description:
-          "Caribbean cuisine inspired by Colombia's coastal flavors. Breakfast, lunch, and dinner available.",
+        name: "Bar",
+        description: "Full-service bar with drinks delivered to your villa",
       },
       {
-        name: "Full-Service Bar",
-        description:
-          "Available for happy hour at the bar or in-villa delivery. Staff delivers drinks directly to your Tiny Villa.",
+        name: "Restaurant",
+        description: "Tia's Kitchen & Bar - Caribbean cuisine",
       },
+      { name: "Pool", description: "Beautiful outdoor pool" },
+      { name: "Gym", description: "On-property fitness center" },
       {
-        name: "Pool with Jacuzzi",
-        description:
-          "Beautifully designed outdoor pool with relaxing jet-filled jacuzzi.",
+        name: "Boat Transport",
+        description: "Scheduled boat service to/from Cartagena",
       },
-      {
-        name: "Roof Terrace",
-        description:
-          "360-degree panoramic views of island and city. Accessible 24 hours. Perfect for sunrise, sunset, and stargazing.",
-      },
-      {
-        name: "Boat Transportation",
-        description:
-          "Pickup and drop-off at Muelle Pegasus dock. Available for check-in/check-out and throughout the day.",
-      },
-      {
-        name: "Fitness Center",
-        description: "On-property gym available to all guests.",
-      },
-      {
-        name: "Solar Power",
-        description:
-          "Entire property runs on solar energy. Stay connected while minimizing carbon footprint.",
-      },
-      {
-        name: "Multilingual Support",
-        description: "Staff assists in English, Spanish, and French.",
-      },
+      { name: "WiFi", description: "Available throughout the property" },
+    ],
+    pool_rules: {
+      hours: "7:00 AM - 10:00 PM",
+      rules: [
+        "No glass containers in the pool area for safety reasons",
+        "Please shower before entering the pool to help keep the water clean",
+      ],
+    },
+    villa_features: [
+      "Natural cross-breezes and powerful industrial fans keep villas comfortable",
+      "Portable air conditioners available upon request",
+      "No hot water - refreshing, climate-temperature showers (eco-friendly)",
+      "Towels are not changed daily unless requested (help us stay eco-friendly)",
     ],
   },
 
   // ==========================================
-  // BOAT FLEET
+  // PAYMENTS & CASH
   // ==========================================
-  boats: {
-    colibri_one: {
-      name: "Colibri ONE",
-      type: "38' Cruiser",
-      origin: "Originally built by Monte Carlo yacht designer",
-      capacity: "~20 passengers",
-      features: [
-        "Twin 350HP Yamaha engines",
-        "Bathroom",
-        "Second floor",
-        "Small cabin",
-        "Speakers",
-        "Full bar",
-      ],
-      best_for:
-        "Group day trips, Rosario Islands excursions, special group adventures",
-    },
-    pescadito: {
-      name: "Pescadito",
-      type: "Smaller boat",
-      capacity: "Up to 8 passengers",
-      features: ["Twin 50HP Yamaha engines", "Speakers"],
-      best_for:
-        "Guest transportation to/from TVC, Sunset Bay Tours, Night Boat Trips to Cartagena",
-    },
-    partner_charters:
-      "TVC works with trusted partner charter companies for groups of 40+ or special requests.",
+  payments: {
+    at_tvc:
+      "We do NOT accept cash at Tiny Village. Credit/debit cards only for your convenience.",
+    on_island:
+      "No ATMs on Tierra Bomba. Local businesses only accept cash. Bring Colombian pesos if you plan to make purchases outside the property.",
+    tipping:
+      "Not mandatory but appreciated. If you receive great service, a small tip goes a long way!",
+    water: "Do not drink tap water. Bottled water is available for purchase.",
   },
 
   // ==========================================
-  // EXPERIENCES & EVENTS
+  // VILLAS
   // ==========================================
-  experiences: {
-    culture_trips: {
-      name: "Culture Trips",
-      description: "Curated weekend packages showcasing the best of Cartagena",
-      includes: [
-        "Customized tours and cultural exchange events",
-        "Famous island visits (including Rosario Islands)",
-        "Culinary experiences with Cartagena's best-kept secrets",
-        "Access to TVC's iconic day parties",
-        "Worry-free planning - TVC handles everything",
-      ],
-    },
-    private_parties: {
-      name: "Private Parties",
-      description:
-        "Book the pool, bar, and 360-degree views for exclusive day party",
-      includes: [
-        "Crafted cocktails",
-        "Music",
-        "Fresh local eats",
-        "Pool and jacuzzi access",
-      ],
-    },
-    bottomless_brunch: {
-      name: "Private Bottomless Brunch",
-      description: "Exclusive brunch with unlimited property access",
-      includes: [
-        "Personal chef and staff",
-        "All needs attended to",
-        "Bottomless mimosas",
-      ],
-    },
-    private_dinner: {
-      name: "Private 4-Course Dinner",
-      description: "Bespoke dinner experience",
-      includes: [
-        "Sunset departure from Cartagena by chartered boat",
-        "Arrival at TVC for elegant dinner",
-        "Fully customized 4-course menu",
-        "Wine pairing",
-        "Curated by TVC's chef",
-      ],
-    },
-    custom_events:
-      "Corporate events, photoshoots, and more - TVC will work with you to make it happen.",
-  },
-
-  // ==========================================
-  // VILLAGE TAKEOVER
-  // ==========================================
-  village_takeover: {
+  villas: {
+    total_units: 10,
     description:
-      "TVC's most exclusive offering - exclusive buyout of the entire property for your group",
-    includes: [
-      "Private access to all 10 Tiny Villas",
-      "19 double beds",
-      "Up to 42 guests",
-      "ALL TVC amenities",
-      "Breakfast for all guests",
-    ],
-    upgrades: [
-      "Premium boat transportation",
-      "Curated activities and excursions",
-      "Private brunches, dinners, parties",
-    ],
-    best_for: [
-      "Weddings",
-      "Bachelor/Bachelorette trips",
-      "Milestone birthdays (30s, 40s, 50s, etc.)",
-      "Corporate retreats",
-      "Family reunions",
-      "Epic group getaways",
-    ],
-    booking_process:
-      "Fill out vacation builder form on TVC website. Custom quote returned within 3 business days.",
-    deposit_required: true,
-    deposit_reason:
-      "Once confirmed, entire resort is removed from market for those dates.",
-  },
-
-  // ==========================================
-  // EXCURSIONS
-  // ==========================================
-  excursions: [
-    "Rosario Islands Day Excursion",
-    "Palenque Cultural Experience (first free African town in the Americas)",
-    "Island ATV Tour",
-    "Aviary Bird Sanctuary",
-    "El Totumo Mud Volcano",
-    "Sunset Bay Tour (Pescadito boat)",
-    "Night Boat Trip to Cartagena",
-    "Private Bottomless Brunch at TVC",
-    "Private 4-Course Dinner at TVC",
-  ],
-
-  // ==========================================
-  // TVC AGENCY
-  // ==========================================
-  agency: {
-    description:
-      "TVC has grown beyond boutique resort into full hospitality brand",
-    services: [
-      {
-        name: "TVC Event Services",
-        description:
-          "Full event planning and execution on-site and throughout Cartagena. Weddings, private parties, corporate events.",
-      },
-      {
-        name: "TVC Experiences",
-        description:
-          "Handpicked tours and excursions throughout Cartagena. Curated best vendors for the FULL Cartagena experience.",
-      },
-      {
-        name: "TVC Boating",
-        description: "Boat fleet management and charter coordination.",
-      },
+      "10 beautifully designed Tiny Houses inspired by Cartagena's Spanish Colonial architecture",
+    features: [
+      "High ceilings with natural airflow",
+      "Powerful industrial fans",
+      "Portable AC available on request",
+      "Private patios",
+      "Artisanal Caribbean coast interior design",
     ],
   },
 
   // ==========================================
-  // RESTAURANT & MENU - TIA'S COCINA & BAR
+  // RESTAURANT - TIA'S KITCHEN & BAR
   // ==========================================
   restaurant: {
-    name: "Tia's Cocina & Bar",
+    name: "Tia's Kitchen & Bar",
     description:
-      "Full-service restaurant serving Caribbean cuisine. Breakfast included in all stays.",
-
+      "The heart of our culinary experience is Tia, our beloved chef whose warmth, charisma, and infectious smile light up every corner of Tiny Village Cartagena. With every dish she prepares, Tia brings not just flavor but joy - turning meals into memorable moments. Her cooking is a celebration of tradition, creativity, and love.",
+    hours: {
+      breakfast: "7:30am - 9:30am",
+      lunch: "11:30am - 2:00pm",
+      dinner: "4:00pm - 8:00pm",
+      after_hours:
+        "After 8:00 PM, After Hours Snack Boxes are available - so you'll never go hungry!",
+    },
+    menus: [
+      "Tia's Kitchen & Bar menu",
+      "Menu Specialties",
+      "4 Courses dinner menu",
+      "Brunch menu (Village People Brunch)",
+      "Bottles menu",
+    ],
     food_menu: {
       starters: [
-        { name: "Empanadas", spanish: "Empanadas", price: 22000 },
-        {
-          name: "Cassava Croquettes",
-          spanish: "Croquetas de yuca",
-          price: 22000,
-        },
-        { name: "Patacones", spanish: "Patacones", price: 22000 },
+        { name: "Empanadas", price: 22000 },
+        { name: "Cassava Croquettes (Croquetas de yuca)", price: 22000 },
+        { name: "Patacones", price: 22000 },
       ],
       sandwiches_mains: [
+        { name: "Chicken Sandwich", price: 44000 },
+        { name: "Turkey, Ham and Cheese Sandwich", price: 44000 },
+        { name: "Vegan Burger", price: 35000 },
+        { name: "Beef Burger", price: 52000 },
+        { name: "Vegetarian Wraps", price: 52000 },
+        { name: "Vegan Buddha Bowl", price: 52000 },
+        { name: "Hot Dog with Chips", price: 35000 },
+      ],
+      specialties: [
         {
-          name: "Chicken Sandwich",
-          spanish: "Sándwich de Pollo",
-          price: 44000,
+          name: "Caribbean Lobster Delight",
+          price: 180000,
+          description:
+            "Grilled lobster with coconut rice, tropical salad, and golden patacones",
         },
         {
-          name: "Turkey, Ham and Cheese Sandwich",
-          spanish: "Sándwich de pavo, jamón y queso",
-          price: 44000,
-        },
-        { name: "Vegan Burger", spanish: "Hamburguesa Vegana", price: 35000 },
-        { name: "Beef Burger", spanish: "Hamburguesa de Carne", price: 52000 },
-        {
-          name: "Vegetarian Wraps",
-          spanish: "Envolturas Vegetarianas",
-          price: 52000,
+          name: "Coconut Fish Fantasy",
+          price: 75000,
+          description:
+            "Catch of the day in creamy coconut sauce with coconut rice and patacones",
         },
         {
-          name: "Vegan Buddha Bowl",
-          spanish: "Cuenco de Buda vegano",
-          price: 52000,
+          name: "Island Beef Plate",
+          price: 65000,
+          description:
+            "Tender beef with sauteed vegetables, coconut rice, and choice of fries or patacones",
         },
         {
-          name: "Hot Dog with Chips",
-          spanish: "Perro caliente con chips",
-          price: 35000,
+          name: "Grilled Chicken Tropicale",
+          price: 65000,
+          description:
+            "Juicy grilled chicken with coconut rice and passion fruit salad",
         },
       ],
     },
-
     drinks_menu: {
       non_alcoholic: [
         { name: "Soda", price: 8700 },
@@ -374,196 +308,194 @@ export const TVC_KNOWLEDGE = {
         { name: "Premium Shots", price: 44000 },
       ],
     },
-
     bottle_service: {
       tequila: [
-        { name: "Olmeca Silver", price: 200000 },
-        { name: "Olmeca Reposado", price: 200000 },
+        { name: "Olmeca Silver/Reposado", price: 200000 },
         { name: "1800 Silver", price: 540000 },
         { name: "Patron Silver", price: 580000 },
-        { name: "1800 Reposado", price: 580000 },
         { name: "Don Julio Silver", price: 620000 },
-        { name: "Don Julio Reposado", price: 640000 },
         { name: "Casamigos", price: 700000 },
       ],
       vodka: [
-        { name: "Absolut Vodka", price: 220000 },
-        { name: "Tito's Vodka", price: 440000 },
+        { name: "Absolut", price: 220000 },
+        { name: "Tito's", price: 440000 },
         { name: "Grey Goose", price: 500000 },
       ],
-      gin: [{ name: "Hendrick's Gin", price: 560000 }],
       whiskey: [
-        { name: "Black & White Whisky", price: 180000 },
-        { name: "Something Special Whisky", price: 240000 },
+        { name: "Black & White", price: 180000 },
         { name: "Jack Daniel's", price: 460000 },
-        { name: "Jack Daniel's Honey", price: 480000 },
         { name: "Jameson", price: 440000 },
       ],
-      cognac: [{ name: "Hennessy", price: 700000 }],
       rum: [
         { name: "Bandoleros", price: 140000 },
-        { name: "Ron Caldas Blanco", price: 140000 },
-        { name: "Bacardi Rum", price: 160000 },
-        { name: "Ron Medellín", price: 160000 },
-        { name: "Ron Medellín 8 Años", price: 180000 },
+        { name: "Ron Medellin", price: 160000 },
         { name: "La Hechicera", price: 500000 },
       ],
-      sparkling: [
-        { name: "Nuit Doree", price: 160000 },
-        { name: "Rothberg Brut", price: 180000 },
-      ],
-      wine: [
-        { name: "Vino Blanco Santa Carolina Reserva", price: 120000 },
-        { name: "Vino Tinto Viejo Viñedo", price: 100000 },
-      ],
+      cognac: [{ name: "Hennessy", price: 700000 }],
     },
-
+    private_dinner_menus: [
+      { name: "Cartagena Culture Menu", price_per_person: 235000 },
+      { name: "Sunset Flavors of the Coast", price_per_person: 200000 },
+      { name: "Jungle Soul Tasting", price_per_person: 170000 },
+    ],
     brunch: {
       name: "Village People - Bottomless Brunch",
       tagline:
-        "Brunch is a lifestyle — and life doesn't get much better than TVC's private brunch event!",
+        "Brunch is a lifestyle - and life doesn't get much better than TVC's private brunch event!",
       includes: ["Bottomless Mimosas", "Bottomless Tapas"],
-      pricing: "Contact TVC for group pricing",
-      menu_items: {
-        proteins: [
-          "Mini Burgers (Beef, Chicken, Vegetarian)",
-          "Sausages & Blood Sausages",
-          "Crispy Fried Chicken",
-          "Crunchy Fried Fish",
-        ],
-        classics: [
-          "Waffles (Gluten-Free)",
-          "Creamy Scrambled Eggs",
-          "Empanadas (Classic & Vegetarian)",
-        ],
-        seafood: ["Shrimp", "Crab Baskets", "Fried Fish"],
-        sides: [
-          "Quinoa Salad with Avocado, Tomatoes & Cucumber (GF)",
-          "Guacamole with Plantain Chips (Vegan & GF)",
-          "Tostones + Crab",
-          "Crispy Fried Yuca",
-        ],
-      },
     },
+    outside_food:
+      "Outside food & drinks are allowed, but we kindly ask you to dispose of waste properly.",
+  },
 
-    specialties: [
+  // ==========================================
+  // THINGS TO DO NEARBY
+  // ==========================================
+  nearby: {
+    beach:
+      "Just a 2-minute walk from our property, guests can enjoy a beautiful beach perfect for relaxing by the sea.",
+    restaurants: [
+      { name: "Palmarito Beach", phone: "+57 310 5172659" },
+      { name: "Vista Mare Beach House", phone: "+57 313 5508457" },
+      { name: "Eteka", phone: "+57 301 2533196" },
+    ],
+    beach_clubs: [
+      { name: "Amare", phone: "+57 314 2594747" },
+      { name: "Tamarindo", phone: "+57 300 8304905" },
+      { name: "Anaho", phone: "+57 314 5948838" },
+    ],
+    beaches: ["Playa Linda", "Playa Punta Arena"],
+    adventures: [
       {
-        name: "Caribbean Lobster Delight",
-        description:
-          "Grilled lobster on butter with coconut rice, tropical salad with passion fruit dressing, and golden patacones",
-        price: 180000,
+        name: "Jet Skiing",
+        note: "Right outside our resort, just a call away!",
       },
       {
-        name: "Coconut Fish Fantasy",
-        description:
-          "Catch of the day in creamy coconut sauce, with coconut rice, maracuyá salad, and crispy patacones",
-        price: 75000,
+        name: "Bike Ride - Bocachica & the Fort",
+        note: "Pedal to Bocachica and explore its historic fort. Book 24 hours in advance.",
       },
       {
-        name: "Island Beef Plate",
-        description:
-          "Tender beef with sautéed vegetables and house sauce, coconut rice, maracuyá salad, choice of fries or patacones",
-        price: 65000,
+        name: "Moto Tour - Around the Island",
+        note: "Discover Tierra Bomba by moto - villages, beaches, hidden gems. Book 24 hours ahead.",
       },
       {
-        name: "Grilled Chicken Tropicale",
-        description:
-          "Juicy grilled chicken with coconut rice, passion fruit-dressed salad, and crunchy patacones",
-        price: 65000,
+        name: "Sunset Bay Tour",
+        note: "Cruise into golden hour with skyline views and sparkling waters.",
       },
     ],
-
-    private_dinner_menus: [
+    local_villages: [
       {
-        name: "Cartagena Culture Menu",
-        price_per_person: 235000,
-        courses: [
-          {
-            course: "Starter",
-            dish: "Tropical Coconut & Mango Ceviche",
-            description:
-              "Tender coconut, juicy mango, fresh lime, and cilantro",
-          },
-          {
-            course: "Second",
-            dish: "Garlic Shrimp in Plantain Cups",
-            description:
-              "Crispy plantain baskets with shrimp in garlic butter sauce",
-          },
-          {
-            course: "Main",
-            dish: "Cartagena-Style Braised Beef (Posta Cartagenera)",
-            description:
-              "Slow-braised beef with Colombian spices, mashed potatoes, garden salad",
-          },
-          {
-            course: "Dessert",
-            dish: "Enyucado with Vanilla Ice Cream & Arequipe",
-            description:
-              "Traditional coconut and cassava cake with ice cream and Colombian caramel",
-          },
-        ],
+        name: "Bocachica",
+        description:
+          "A raw, authentic island experience - no paved roads or running water, but full of culture, history, and soul.",
       },
       {
-        name: "Sunset Flavors of the Coast",
-        price_per_person: 200000,
-        courses: [
-          {
-            course: "Starter",
-            dish: "Watermelon & Feta Salad",
-            description:
-              "Juicy watermelon with creamy feta, fresh basil, and zesty lime dressing",
-          },
-          {
-            course: "Second",
-            dish: "Mini Arepas with Smoked Chicken & Avocado Crema",
-            description:
-              "Crispy corn arepas with smoky chicken and avocado-lime cream",
-          },
-          {
-            course: "Main",
-            dish: "Grilled Catch with Coconut-Lemongrass Sauce",
-            description:
-              "Fresh fish in coconut-lemongrass sauce with herb rice and sautéed greens",
-          },
-          {
-            course: "Dessert",
-            dish: "Passionfruit Mousse with Coconut Crumble",
-            description:
-              "Airy passion fruit mousse over toasted coconut cookie crumble",
-          },
-        ],
+        name: "Punta Arena",
+        description:
+          "Known for its beautiful beaches and stunning blue waters, perfect for a day under the sun.",
       },
       {
-        name: "Jungle Soul Tasting",
-        price_per_person: 170000,
-        courses: [
-          {
-            course: "Starter",
-            dish: "Corn & Coconut Soup",
-            description:
-              "Smooth corn and coconut milk blend with herbs and lime",
-          },
-          {
-            course: "Second",
-            dish: "Crispy Yuca Bites with Sweet Chili Sauce",
-            description: "Bite-sized fried yuca with sweet chili dipping sauce",
-          },
-          {
-            course: "Main",
-            dish: "Vegetable Stir-Fry with Coconut Rice",
-            description:
-              "Colorful sautéed veggies in garlic-soy glaze with coconut rice and mango",
-          },
-          {
-            course: "Dessert",
-            dish: "Warm Plantains with Chocolate Sauce",
-            description:
-              "Sweet pan-fried plantains with melted chocolate and cinnamon",
-          },
-        ],
+        name: "Playa Linda",
+        description:
+          "A wide, sandy beach loved by locals and visitors alike, offering a laid-back vibe and true charm of island life.",
+      },
+      {
+        name: "Tierra Bomba Village",
+        description:
+          "The island's main community, where you'll find daily local life, small shops, and warm hospitality.",
       },
     ],
+    village_tip:
+      "Be respectful when visiting local communities, and it's best to leave fancy jewelry at home.",
+  },
+
+  // ==========================================
+  // TVC EXPERIENCES
+  // ==========================================
+  experiences: [
+    {
+      name: "Art and City Tour",
+      description:
+        "Learn about the architecture that makes Cartagena and TVC so special in this walking tour in the historic center.",
+    },
+    {
+      name: "Aviario Bird Sanctuary",
+      description:
+        "Home to 190 bird species across three ecosystems - see flamingos, parrots, eagles, and peacocks roaming freely.",
+    },
+    {
+      name: "El Totumo Mud Volcano",
+      description:
+        "Get natural spa therapy at this natural mud volcano just minutes outside of Cartagena. Quite an experience!",
+    },
+    {
+      name: "Palenque Cultural Experience Tour",
+      description:
+        "Experience the culture, customs and history of one of the most unique places in the world. Palenque is first free black settlement in the Americas and has preserved their customs and language for hundreds of years.",
+    },
+    {
+      name: "Island ATV Tour",
+      description:
+        "Amazing beach and island ATV excursion through some of the most beautiful terrain in Cartagena.",
+    },
+    {
+      name: "Rosario Islands Experience",
+      description:
+        "Set sail for adventure! The Rosarios are among the most breathtaking islands in the world. Hop from island to island, soak up the turquoise waters, and feel like the captain of your own boat.",
+    },
+    {
+      name: "Playa Blanca",
+      description:
+        "One of Cartagena's most famous beaches - absolutely stunning! You'll have a TVC guide by your side to make sure you enjoy it like a true insider.",
+    },
+    {
+      name: "Private Events",
+      description:
+        "Whether with a private dinner, brunch, party or any other type of event, we'll make sure your private event is unforgettable.",
+    },
+  ],
+
+  // ==========================================
+  // VILLAGE TAKEOVER
+  // ==========================================
+  village_takeover: {
+    description:
+      "TVC's most exclusive offering - exclusive buyout of the entire property for your group",
+    includes: [
+      "Private access to all 10 Tiny Villas",
+      "ALL TVC amenities",
+      "Breakfast for all guests",
+    ],
+    best_for: [
+      "Weddings",
+      "Bachelor/Bachelorette trips",
+      "Milestone birthdays",
+      "Corporate retreats",
+      "Family reunions",
+      "Epic group getaways",
+    ],
+    booking: "Contact us via WhatsApp +57 316 055 1387",
+  },
+
+  // ==========================================
+  // HOTEL RULES
+  // ==========================================
+  rules: {
+    general: [
+      "Keep the vibes positive",
+      "Respect other guests & staff",
+      "No wild parties - let's keep it classy!",
+      "No unregistered guests",
+    ],
+    noise:
+      "Out of respect for all guests, loud music is not allowed after 11:00 PM.",
+    smoking:
+      "Smoking is allowed only in designated areas. Please do not smoke inside the villas.",
+    fire_safety:
+      "Open flames (candles, bonfires, fireworks) are NOT allowed on the property for safety reasons.",
+    bugs: "You're on a tropical island - expect geckos, mosquitoes, and the occasional crab. We provide mosquito repellent.",
+    lost_found:
+      "We are not responsible for lost or forgotten items, but we'll do our best to help recover them if possible.",
   },
 };
 
@@ -574,262 +506,83 @@ export const TVC_KNOWLEDGE = {
 export const CARTAGENA_KNOWLEDGE = {
   overview: {
     description:
-      "Cartagena de Indias is a vibrant port city on Colombia's Caribbean coast. Founded in 1533, it's known for its colorful colonial architecture, incredible food scene, and rich Afro-Caribbean culture.",
+      "Cartagena de Indias is a vibrant port city on Colombia's Caribbean coast. Known for colorful colonial architecture, incredible food scene, and rich Afro-Caribbean culture.",
     timezone: "Colombia Time (COT) - UTC-5",
     currency: "Colombian Peso (COP)",
     language: "Spanish (most tourism workers speak English)",
-    best_time_to_visit:
-      "December to April (dry season). June-July also good. Avoid September-November (rainiest).",
-    weather: {
-      avg_temp: "27-32°C (80-90°F) year-round",
-      humidity: "High (80%+)",
-      rainy_season: "May-November, with peaks in October",
-      dry_season: "December-April",
-    },
   },
 
-  getting_there: {
-    airport: {
-      name: "Rafael Nuñez International Airport",
-      code: "CTG",
-      distance_to_city: "15 minutes to Old Town",
-      tips: [
-        "Book airport taxi inside terminal (safer, fixed rates)",
-        "Uber works but may need to be discreet",
-        "Typical taxi to Old Town: 25,000-35,000 COP",
-      ],
-    },
-    to_tvc: {
-      step1:
-        "Get to Muelle Pegasus dock in Cartagena (taxi or Uber from airport/hotel)",
-      step2: "TVC boat picks you up at scheduled time",
-      step3: "15-minute scenic boat ride to Tierra Bomba island",
-      tip: "Coordinate arrival time with TVC team",
-    },
+  immigration: {
+    visa: "Many nationalities can enter Colombia visa-free for up to 90 days. Check your country's requirements.",
+    passport:
+      "Ensure your passport is valid for at least six months upon arrival.",
+    proof_of_exit: "Immigration may ask for a return or onward ticket.",
+    customs: "Declare cash over $10,000 USD to avoid issues.",
+    health:
+      "No vaccines are mandatory, but yellow fever is recommended if visiting jungle areas.",
+    tvc_address:
+      "If asked for address: Tiny Village Cartagena, Isla Tierra Bomba, Cartagena / +57 316 055 1387",
   },
 
-  neighborhoods: {
-    old_town: {
-      name: "Ciudad Amurallada (Walled City)",
-      description:
-        "UNESCO World Heritage Site. Colorful colonial buildings, historic churches, plazas, restaurants, and nightlife.",
-      highlights: [
-        "Plaza Santo Domingo",
-        "Clock Tower (Torre del Reloj)",
-        "San Felipe Castle",
-        "Cathedral of Cartagena",
-      ],
-      vibe: "Tourist-friendly, walkable, romantic, historic",
-    },
-    getsemani: {
-      name: "Getsemaní",
-      description:
-        "Hip, artistic neighborhood just outside the walls. Street art, local bars, authentic vibes.",
-      highlights: [
-        "Plaza de la Trinidad",
-        "Street art murals",
-        "Local bars and restaurants",
-        "Café Havana (salsa club)",
-      ],
-      vibe: "Artsy, local, nightlife, budget-friendly",
-    },
-    bocagrande: {
-      name: "Bocagrande",
-      description:
-        "Modern beach area with high-rise hotels, casinos, and beach clubs.",
-      highlights: ["Beaches", "Shopping malls", "Modern restaurants"],
-      vibe: "Miami-like, resort feel, less historic",
-    },
-    tierra_bomba: {
-      name: "Tierra Bomba",
-      description:
-        "Island just off Cartagena coast. Where TVC is located. More relaxed, local feel, beautiful beaches.",
-      highlights: [
-        "Tiny Village Cartagena",
-        "Playa Blanca Tierra Bomba",
-        "Local fishing communities",
-      ],
-      vibe: "Island escape, peaceful, authentic",
-    },
+  airport_tips: {
+    luggage:
+      "Some people will try to carry your bags and then ask for money. Just say 'No, gracias' if you don't want help.",
+    cash: "There are ATMs just outside arrivals in the departures area. You'll need pesos for small purchases.",
+    safety:
+      "Watch your bags and don't accept help from strangers unless they're official staff.",
+    etiquette:
+      "Locals are kind and helpful - a smile and a 'hola' go a long way.",
   },
 
-  food_and_drink: {
-    must_try: [
-      {
-        name: "Ceviche",
-        description: "Fresh seafood cured in citrus, often with coconut",
-      },
-      {
-        name: "Arepa de Huevo",
-        description: "Fried corn cake stuffed with egg",
-      },
-      {
-        name: "Cazuela de Mariscos",
-        description: "Creamy seafood stew with coconut milk",
-      },
-      {
-        name: "Patacones",
-        description: "Fried plantain discs, served as side or appetizer",
-      },
-      {
-        name: "Cocada",
-        description: "Sweet coconut candy, sold on beaches",
-      },
-      {
-        name: "Limonada de Coco",
-        description: "Coconut limeade - incredibly refreshing",
-      },
-      {
-        name: "Aguardiente",
-        description: "Anise-flavored spirit - Colombia's national drink",
-      },
-      {
-        name: "Ron Cartagena",
-        description: "Local rum",
-      },
-    ],
-    dining_tips: [
-      "Lunch (almuerzo) is biggest meal - look for 'menu del día' for value",
-      "Dinner starts late (8pm+)",
-      "Tip 10% (not always included)",
-      "Street food is generally safe at busy stalls",
-    ],
-  },
-
-  safety: {
-    general:
-      "Cartagena is generally safe for tourists, especially in tourist areas. Use common sense.",
-    tips: [
-      "Stay in well-lit, populated areas at night",
-      "Don't flash expensive jewelry or electronics",
-      "Use registered taxis or Uber",
-      "Keep copies of passport (leave original in hotel safe)",
-      "Watch drinks at bars/clubs",
-      "Avoid Bazurto market unless with local guide",
-      "Beach vendors can be persistent - polite 'no gracias' works",
-    ],
-    emergency: {
-      police: "123",
-      ambulance: "125",
-      tourist_police: "317 437 6031",
-    },
-  },
+  nighttime_tips: [
+    "The island gets very dark at night outside of the property, so a small flashlight or phone light is helpful when walking around.",
+    "Mosquitoes are more active after sunset - wear repellent if sitting outside.",
+    "Keep noise levels low after 11:00 PM out of respect for other guests.",
+    "If you're returning late from Cartagena, respect other guests - avoid loud music or conversations in shared areas.",
+  ],
 
   practical: {
-    money: {
-      currency: "Colombian Peso (COP)",
-      exchange_rate_note:
-        "Check current rates - approximately 4000 COP = 1 USD",
-      atms: "Widely available. Use bank ATMs inside buildings for safety",
-      cards: "Visa/Mastercard accepted at most tourist places",
-      cash: "Carry cash for street vendors, small shops, tips",
-      tip: "Many ATMs offer bad exchange rates - decline conversion",
-    },
-    connectivity: {
-      wifi: "Good at hotels and restaurants",
-      sim: "Claro, Movistar, Tigo available. Buy at airport or Éxito stores",
-      whatsapp: "Primary communication method in Colombia",
-    },
-    health: {
-      water: "Drink bottled water only",
-      mosquitos: "Bring repellent. Dengue exists but rare in tourist areas",
-      sun: "Strong - use SPF 50+, reapply often",
-      pharmacies:
-        "Droguerías available everywhere. Many meds available OTC that require prescriptions elsewhere",
-    },
-    packing: [
-      "Light, breathable clothing",
-      "Reef-safe sunscreen (protect the ocean!)",
-      "Mosquito repellent",
-      "Light rain jacket (rainy season)",
-      "Comfortable walking shoes",
-      "Swimwear",
-      "Hat and sunglasses",
-      "Cash in small bills",
-    ],
-  },
-
-  etiquette: {
-    greetings:
-      "Colombians are warm. Kiss on cheek for women, handshake for men. 'Buenos días/tardes/noches' goes far.",
-    pace: "Life moves slower. Patience is key. Punctuality flexible.",
-    dress:
-      "Casual but neat. Cover up for churches. Swimwear only at beach/pool.",
-    bargaining:
-      "Expected at markets, not at restaurants or stores with fixed prices.",
-    tipping:
-      "10% at restaurants (often not included). Small tips for porters, guides.",
+    water: "Do not drink tap water. Bottled water available for purchase.",
+    sun: "The Caribbean sun can be intense. Stay hydrated and use sunscreen.",
+    communication:
+      "WhatsApp is the best way to communicate. Cell service can be spotty on the island, but WiFi is available at the hotel.",
+    activities_booking:
+      "Bike riding tour, island and boat tours need at least 24-48 hours notice.",
+    beach_shoes:
+      "Bring water shoes if you plan to explore - some beach areas have rocks or coral.",
+    village_dress:
+      "When walking around local villages, dress modestly and be respectful. Locals are friendly, but be mindful of cultural norms.",
   },
 
   nightlife: {
     hotspots: [
       {
-        name: "Café Havana",
+        name: "Cafe Havana",
         type: "Salsa club",
-        location: "Getsemaní",
+        location: "Getsemani",
         note: "THE place for live salsa. Gets packed late.",
       },
       {
-        name: "Alquímico",
+        name: "Alquimico",
         type: "Cocktail bar",
         location: "Old Town",
         note: "Award-winning cocktails, rooftop, great vibes",
       },
-      {
-        name: "La Movida",
-        type: "Bar/Club",
-        location: "Getsemaní",
-        note: "Good music, dancing, local crowd",
-      },
-      {
-        name: "Donde Fidel",
-        type: "Salsa bar",
-        location: "Portal de los Dulces",
-        note: "Classic, less touristy than Café Havana",
-      },
     ],
     tips: [
       "Nightlife starts late - 11pm onwards",
-      "Cover charges common at clubs (50-100k COP)",
-      "Dress code: smart casual usually fine",
-      "Thursday-Saturday are biggest nights",
+      "TVC offers Nightlife Experience: 7:30 PM departure, 12:00 AM return",
     ],
   },
 
-  day_trips: [
-    {
-      name: "Rosario Islands",
-      distance: "1 hour by boat",
-      highlights: "Crystal clear water, snorkeling, beach clubs",
-      tip: "Book through TVC for best experience",
-    },
-    {
-      name: "Playa Blanca",
-      distance: "1 hour by boat",
-      highlights: "Beautiful white sand beach",
-      tip: "Can be crowded. TVC's island is more peaceful alternative",
-    },
-    {
-      name: "San Basilio de Palenque",
-      distance: "1 hour by car",
-      highlights:
-        "First free African town in Americas, UNESCO heritage, unique culture",
-      tip: "Go with local guide to truly understand the history",
-    },
-    {
-      name: "El Totumo Mud Volcano",
-      distance: "45 minutes by car",
-      highlights: "Float in mineral-rich mud volcano",
-      tip: "Fun unique experience, great photos",
-    },
-  ],
-
-  visa: {
-    general:
-      "Many nationalities get 90-day visa on arrival. US, EU, UK, Canada, Australia included.",
-    check:
-      "Always verify current requirements for your specific nationality before travel.",
-    extension: "Can extend for another 90 days at Migración Colombia office.",
+  safety: {
+    general: "Cartagena is generally safe for tourists. Use common sense.",
+    tips: [
+      "Stay in well-lit, populated areas at night",
+      "Don't flash expensive jewelry or electronics",
+      "Use registered taxis or Uber",
+      "Leave fancy jewelry at home when visiting local villages",
+    ],
   },
 };
 
@@ -841,90 +594,62 @@ export const BLIND_SPOTS = {
   pre_booking: [
     {
       id: "visa",
-      trigger: "first_message",
       question: "Do you need a visa?",
-      info: "Most Western countries get 90 days on arrival, but always verify for your nationality.",
+      info: "Many nationalities can enter Colombia visa-free for up to 90 days. Make sure your passport is valid for at least 6 months.",
     },
     {
-      id: "weather",
-      trigger: "dates_mentioned",
-      question: "Have you checked the weather for your dates?",
-      info: "Dry season (Dec-Apr) is best. Rainy season (Sep-Nov) can have afternoon showers but is usually fine.",
-    },
-    {
-      id: "best_time",
-      trigger: "when_to_visit",
-      question: "When's the best time to visit?",
-      info: "December-April for guaranteed sun. June-July also lovely. September-October rainiest.",
+      id: "boat_options",
+      question: "How will you get to TVC?",
+      info: "We have two options: Local lanchas (50,000 COP) from behind Bocagrande Hospital, or premium TVC Boating from Todomar Marina (Pescadito 200K one-way, Colibri One 450K one-way). Guests who book directly enjoy complimentary transfers!",
     },
   ],
 
   pre_arrival: [
     {
-      id: "packing",
-      trigger: "within_7_days",
-      question: "Have you packed everything you need?",
-      info: "Light clothes, reef-safe sunscreen (protects our ocean!), mosquito repellent, comfortable shoes, small bills in cash.",
-    },
-    {
-      id: "dock_directions",
-      trigger: "within_3_days",
-      question: "Do you know how to get to Muelle Pegasus?",
-      info: "It's in Cartagena's historic center. Taxi from airport costs about 30,000 COP. We'll text you exact coordinates.",
-    },
-    {
-      id: "cash_situation",
-      trigger: "within_7_days",
+      id: "cash",
       question: "Do you have Colombian pesos?",
-      info: "ATMs are at the airport. Get some cash for tips, small purchases. Cards work at most tourist spots.",
+      info: "IMPORTANT: There are NO ATMs on Tierra Bomba! TVC only accepts cards, but local businesses only accept cash. Get pesos at the airport before coming.",
     },
     {
-      id: "phone_service",
-      trigger: "within_7_days",
-      question: "Will your phone work here?",
-      info: "WhatsApp works everywhere with WiFi. For data, buy a local SIM at the airport (Claro is best). Or check your roaming plan.",
+      id: "packing",
+      question: "Have you packed everything?",
+      info: "Light clothes, sunscreen, mosquito repellent, water shoes (for exploring beaches with rocks), small flashlight for nighttime walks on the island.",
     },
     {
-      id: "dietary",
-      trigger: "food_mentioned",
-      question: "Any dietary restrictions we should know about?",
-      info: "Our chef can accommodate most diets - just let us know! Vegetarian, vegan, gluten-free all possible.",
+      id: "boat_schedule",
+      question: "Know the boat times?",
+      info: "From Cartagena to TVC: 3:00 PM and 6:30 PM. From TVC to Cartagena: 8:00 AM and 11:00 AM. Night return at 12:00 AM (extra fees after midnight).",
     },
   ],
 
   on_property: [
     {
-      id: "boat_schedule",
-      trigger: "first_day",
-      question: "Know the boat schedule?",
-      info: "Boats run regularly between TVC and Cartagena. Just ask staff or check the schedule board. We can also arrange private boats.",
+      id: "no_hot_water",
+      question: "Expecting hot water?",
+      info: "Our showers offer refreshing, climate-temperature water - perfect for cooling off in the tropical heat! It's part of our eco-friendly approach.",
     },
     {
-      id: "bar_delivery",
-      trigger: "arrived",
-      question: "Did you know we deliver drinks to your villa?",
-      info: "Just message us or flag any staff member. We'll bring cocktails right to your patio!",
+      id: "ac",
+      question: "Need air conditioning?",
+      info: "Our villas stay cool with natural cross-breezes and powerful industrial fans, but portable AC is available on request if you prefer.",
     },
     {
-      id: "roof_terrace",
-      trigger: "sunset_mention",
-      question: "Have you been to the roof terrace?",
-      info: "360-degree views, open 24 hours. Perfect for sunrise coffee or sunset cocktails. Don't miss it!",
+      id: "pool_hours",
+      question: "When is the pool open?",
+      info: "Pool & Jacuzzi are open 7:00 AM - 10:00 PM. No glass containers allowed for safety!",
+    },
+    {
+      id: "restaurant_hours",
+      question: "When can you eat?",
+      info: "Breakfast 7:30-9:30am, Lunch 11:30am-2pm, Dinner 4-8pm. After 8pm? We have After Hours Snack Boxes!",
     },
   ],
 
   departing: [
     {
       id: "checkout",
-      trigger: "last_day",
-      question: "All set for checkout?",
-      info: "Checkout is at 11am. Boat will take you to Muelle Pegasus. Need a taxi to airport? We can arrange it.",
-    },
-    {
-      id: "review",
-      trigger: "post_stay",
-      question: "Would you share your experience?",
-      info: "We'd love a review on TripAdvisor or Google - it really helps other travelers find us!",
+      question: "Ready for checkout?",
+      info: "Checkout is by 11:00 AM. Boats leave at 8:00 AM and 11:00 AM. Need late checkout? Ask in advance (extra charge may apply).",
     },
   ],
 };
