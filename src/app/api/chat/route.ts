@@ -40,8 +40,9 @@ SALES TECHNIQUES:
 
 RESPONSE LENGTH:
 - Simple questions (price, time): Keep it short (1-2 sentences)
-- Sales opportunities (experiences, bookings, packages): Paint the picture (3-5 sentences max)
-- Always conversational, never corporate
+- Sales opportunities (experiences, bookings, packages): Paint the picture but stay punchy (4-6 sentences)
+- Always end with a question or soft close
+- Never ramble - hit them with the magic, then close
 
 EXAMPLES:
 
@@ -171,7 +172,7 @@ Remember: You're not just answering questions - you're selling a FEELING. Make t
       },
       body: JSON.stringify({
         model: "claude-3-haiku-20240307",
-        max_tokens: 250, // Allow more for sales pitches
+        max_tokens: 350, // Allow more for sales pitches
         system: systemPrompt,
         messages,
       }),
