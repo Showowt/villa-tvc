@@ -302,6 +302,269 @@ export const TVC_KNOWLEDGE = {
       },
     ],
   },
+
+  // ==========================================
+  // RESTAURANT & MENU - TIA'S COCINA & BAR
+  // ==========================================
+  restaurant: {
+    name: "Tia's Cocina & Bar",
+    description:
+      "Full-service restaurant serving Caribbean cuisine. Breakfast included in all stays.",
+
+    food_menu: {
+      starters: [
+        { name: "Empanadas", spanish: "Empanadas", price: 22000 },
+        {
+          name: "Cassava Croquettes",
+          spanish: "Croquetas de yuca",
+          price: 22000,
+        },
+        { name: "Patacones", spanish: "Patacones", price: 22000 },
+      ],
+      sandwiches_mains: [
+        {
+          name: "Chicken Sandwich",
+          spanish: "Sándwich de Pollo",
+          price: 44000,
+        },
+        {
+          name: "Turkey, Ham and Cheese Sandwich",
+          spanish: "Sándwich de pavo, jamón y queso",
+          price: 44000,
+        },
+        { name: "Vegan Burger", spanish: "Hamburguesa Vegana", price: 35000 },
+        { name: "Beef Burger", spanish: "Hamburguesa de Carne", price: 52000 },
+        {
+          name: "Vegetarian Wraps",
+          spanish: "Envolturas Vegetarianas",
+          price: 52000,
+        },
+        {
+          name: "Vegan Buddha Bowl",
+          spanish: "Cuenco de Buda vegano",
+          price: 52000,
+        },
+        {
+          name: "Hot Dog with Chips",
+          spanish: "Perro caliente con chips",
+          price: 35000,
+        },
+      ],
+    },
+
+    drinks_menu: {
+      non_alcoholic: [
+        { name: "Soda", price: 8700 },
+        { name: "Fruit Juice", price: 13000 },
+        { name: "Water (XL)", price: 8000 },
+        { name: "Unlimited Daily Water", price: 20000 },
+      ],
+      cocktails: [
+        { name: "Margarita", price: 44000 },
+        { name: "Cuba Libre", price: 44000 },
+        { name: "Mojito", price: 44000 },
+        { name: "Gin and Tonic", price: 44000 },
+        { name: "Moscow Mule", price: 44000 },
+      ],
+      other: [
+        { name: "Beer", price: 22000 },
+        { name: "Glass of Wine", price: 35000 },
+        { name: "Shots", price: 30000 },
+        { name: "Premium Drinks", price: 61000 },
+        { name: "Premium Shots", price: 44000 },
+      ],
+    },
+
+    bottle_service: {
+      tequila: [
+        { name: "Olmeca Silver", price: 200000 },
+        { name: "Olmeca Reposado", price: 200000 },
+        { name: "1800 Silver", price: 540000 },
+        { name: "Patron Silver", price: 580000 },
+        { name: "1800 Reposado", price: 580000 },
+        { name: "Don Julio Silver", price: 620000 },
+        { name: "Don Julio Reposado", price: 640000 },
+        { name: "Casamigos", price: 700000 },
+      ],
+      vodka: [
+        { name: "Absolut Vodka", price: 220000 },
+        { name: "Tito's Vodka", price: 440000 },
+        { name: "Grey Goose", price: 500000 },
+      ],
+      gin: [{ name: "Hendrick's Gin", price: 560000 }],
+      whiskey: [
+        { name: "Black & White Whisky", price: 180000 },
+        { name: "Something Special Whisky", price: 240000 },
+        { name: "Jack Daniel's", price: 460000 },
+        { name: "Jack Daniel's Honey", price: 480000 },
+        { name: "Jameson", price: 440000 },
+      ],
+      cognac: [{ name: "Hennessy", price: 700000 }],
+      rum: [
+        { name: "Bandoleros", price: 140000 },
+        { name: "Ron Caldas Blanco", price: 140000 },
+        { name: "Bacardi Rum", price: 160000 },
+        { name: "Ron Medellín", price: 160000 },
+        { name: "Ron Medellín 8 Años", price: 180000 },
+        { name: "La Hechicera", price: 500000 },
+      ],
+      sparkling: [
+        { name: "Nuit Doree", price: 160000 },
+        { name: "Rothberg Brut", price: 180000 },
+      ],
+      wine: [
+        { name: "Vino Blanco Santa Carolina Reserva", price: 120000 },
+        { name: "Vino Tinto Viejo Viñedo", price: 100000 },
+      ],
+    },
+
+    brunch: {
+      name: "Village People - Bottomless Brunch",
+      tagline:
+        "Brunch is a lifestyle — and life doesn't get much better than TVC's private brunch event!",
+      includes: ["Bottomless Mimosas", "Bottomless Tapas"],
+      pricing: "Contact TVC for group pricing",
+      menu_items: {
+        proteins: [
+          "Mini Burgers (Beef, Chicken, Vegetarian)",
+          "Sausages & Blood Sausages",
+          "Crispy Fried Chicken",
+          "Crunchy Fried Fish",
+        ],
+        classics: [
+          "Waffles (Gluten-Free)",
+          "Creamy Scrambled Eggs",
+          "Empanadas (Classic & Vegetarian)",
+        ],
+        seafood: ["Shrimp", "Crab Baskets", "Fried Fish"],
+        sides: [
+          "Quinoa Salad with Avocado, Tomatoes & Cucumber (GF)",
+          "Guacamole with Plantain Chips (Vegan & GF)",
+          "Tostones + Crab",
+          "Crispy Fried Yuca",
+        ],
+      },
+    },
+
+    specialties: [
+      {
+        name: "Caribbean Lobster Delight",
+        description:
+          "Grilled lobster on butter with coconut rice, tropical salad with passion fruit dressing, and golden patacones",
+        price: 180000,
+      },
+      {
+        name: "Coconut Fish Fantasy",
+        description:
+          "Catch of the day in creamy coconut sauce, with coconut rice, maracuyá salad, and crispy patacones",
+        price: 75000,
+      },
+      {
+        name: "Island Beef Plate",
+        description:
+          "Tender beef with sautéed vegetables and house sauce, coconut rice, maracuyá salad, choice of fries or patacones",
+        price: 65000,
+      },
+      {
+        name: "Grilled Chicken Tropicale",
+        description:
+          "Juicy grilled chicken with coconut rice, passion fruit-dressed salad, and crunchy patacones",
+        price: 65000,
+      },
+    ],
+
+    private_dinner_menus: [
+      {
+        name: "Cartagena Culture Menu",
+        price_per_person: 235000,
+        courses: [
+          {
+            course: "Starter",
+            dish: "Tropical Coconut & Mango Ceviche",
+            description:
+              "Tender coconut, juicy mango, fresh lime, and cilantro",
+          },
+          {
+            course: "Second",
+            dish: "Garlic Shrimp in Plantain Cups",
+            description:
+              "Crispy plantain baskets with shrimp in garlic butter sauce",
+          },
+          {
+            course: "Main",
+            dish: "Cartagena-Style Braised Beef (Posta Cartagenera)",
+            description:
+              "Slow-braised beef with Colombian spices, mashed potatoes, garden salad",
+          },
+          {
+            course: "Dessert",
+            dish: "Enyucado with Vanilla Ice Cream & Arequipe",
+            description:
+              "Traditional coconut and cassava cake with ice cream and Colombian caramel",
+          },
+        ],
+      },
+      {
+        name: "Sunset Flavors of the Coast",
+        price_per_person: 200000,
+        courses: [
+          {
+            course: "Starter",
+            dish: "Watermelon & Feta Salad",
+            description:
+              "Juicy watermelon with creamy feta, fresh basil, and zesty lime dressing",
+          },
+          {
+            course: "Second",
+            dish: "Mini Arepas with Smoked Chicken & Avocado Crema",
+            description:
+              "Crispy corn arepas with smoky chicken and avocado-lime cream",
+          },
+          {
+            course: "Main",
+            dish: "Grilled Catch with Coconut-Lemongrass Sauce",
+            description:
+              "Fresh fish in coconut-lemongrass sauce with herb rice and sautéed greens",
+          },
+          {
+            course: "Dessert",
+            dish: "Passionfruit Mousse with Coconut Crumble",
+            description:
+              "Airy passion fruit mousse over toasted coconut cookie crumble",
+          },
+        ],
+      },
+      {
+        name: "Jungle Soul Tasting",
+        price_per_person: 170000,
+        courses: [
+          {
+            course: "Starter",
+            dish: "Corn & Coconut Soup",
+            description:
+              "Smooth corn and coconut milk blend with herbs and lime",
+          },
+          {
+            course: "Second",
+            dish: "Crispy Yuca Bites with Sweet Chili Sauce",
+            description: "Bite-sized fried yuca with sweet chili dipping sauce",
+          },
+          {
+            course: "Main",
+            dish: "Vegetable Stir-Fry with Coconut Rice",
+            description:
+              "Colorful sautéed veggies in garlic-soy glaze with coconut rice and mango",
+          },
+          {
+            course: "Dessert",
+            dish: "Warm Plantains with Chocolate Sauce",
+            description:
+              "Sweet pan-fried plantains with melted chocolate and cinnamon",
+          },
+        ],
+      },
+    ],
+  },
 };
 
 // ==========================================
