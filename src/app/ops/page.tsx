@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { StatCard } from "@/components/ops/StatCard";
-import { createBrowserClient } from "@/lib/supabase/client";
+import {
+  createBrowserClient,
+  isBrowserClientAvailable,
+} from "@/lib/supabase/client";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -93,12 +96,21 @@ export default function OpsOverviewPage() {
     weeklyTransport: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [configError, setConfigError] = useState(false);
 
   useEffect(() => {
     loadStats();
   }, []);
 
   const loadStats = async () => {
+    // Check if Supabase is configured before attempting connection
+    if (!isBrowserClientAvailable()) {
+      console.error("[OpsOverviewPage] Supabase not configured");
+      setConfigError(true);
+      setLoading(false);
+      return;
+    }
+
     const supabase = createBrowserClient();
     const today = new Date().toISOString().split("T")[0];
 
@@ -174,6 +186,26 @@ export default function OpsOverviewPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin w-8 h-8 border-2 border-[#00B4FF] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (configError) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+        <div className="text-3xl mb-3">⚠️</div>
+        <h2 className="text-lg font-bold text-amber-800 mb-2">
+          Database Not Configured
+        </h2>
+        <p className="text-sm text-amber-700 mb-4">
+          Supabase environment variables are not available. This usually means
+          they need to be set in Vercel and the project redeployed.
+        </p>
+        <div className="text-xs text-amber-600 font-mono bg-amber-100 p-3 rounded-lg text-left">
+          <div>Required variables:</div>
+          <div className="mt-1">• NEXT_PUBLIC_SUPABASE_URL</div>
+          <div>• NEXT_PUBLIC_SUPABASE_ANON_KEY</div>
+        </div>
       </div>
     );
   }
