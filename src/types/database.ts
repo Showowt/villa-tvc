@@ -629,6 +629,150 @@ export type Database = {
         };
         Relationships: [];
       };
+      daily_tasks: {
+        Row: {
+          id: string;
+          date: string;
+          user_id: string;
+          department: Database["public"]["Enums"]["department_type"] | null;
+          tasks: Json;
+          occupancy_level: string | null;
+          total_count: number;
+          completed_count: number;
+          status: string | null;
+          completed_at: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          date: string;
+          user_id: string;
+          department?: Database["public"]["Enums"]["department_type"] | null;
+          tasks?: Json;
+          occupancy_level?: string | null;
+          total_count?: number;
+          completed_count?: number;
+          status?: string | null;
+          completed_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          date?: string;
+          user_id?: string;
+          department?: Database["public"]["Enums"]["department_type"] | null;
+          tasks?: Json;
+          occupancy_level?: string | null;
+          total_count?: number;
+          completed_count?: number;
+          status?: string | null;
+          completed_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      purchase_orders: {
+        Row: {
+          id: string;
+          created_at: string | null;
+          created_by: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          status: string | null;
+          total_cost: number | null;
+          transport_cost: number | null;
+          forecast_person_nights: number | null;
+          items: Json | null;
+          notes: string | null;
+          delivery_date: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string | null;
+          created_by?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          status?: string | null;
+          total_cost?: number | null;
+          transport_cost?: number | null;
+          forecast_person_nights?: number | null;
+          items?: Json | null;
+          notes?: string | null;
+          delivery_date?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string | null;
+          created_by?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          status?: string | null;
+          total_cost?: number | null;
+          transport_cost?: number | null;
+          forecast_person_nights?: number | null;
+          items?: Json | null;
+          notes?: string | null;
+          delivery_date?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      order_logs: {
+        Row: {
+          id: string;
+          menu_item_id: string;
+          quantity: number;
+          order_date: string | null;
+          served_by: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          menu_item_id: string;
+          quantity?: number;
+          order_date?: string | null;
+          served_by?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          menu_item_id?: string;
+          quantity?: number;
+          order_date?: string | null;
+          served_by?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      staff_rewards: {
+        Row: {
+          id: string;
+          user_id: string;
+          points: number;
+          reason: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          points?: number;
+          reason?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          points?: number;
+          reason?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
       users: {
         Row: {
           auth_id: string | null;
@@ -686,6 +830,7 @@ export type Database = {
           name: string | null;
           name_es: string | null;
           orders_this_week: number | null;
+          avg_orders_per_week: number | null;
           price: number | null;
           transport_cost: number | null;
           weekly_profit: number | null;
