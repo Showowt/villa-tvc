@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { STAFF_BOT_KNOWLEDGE } from "@/lib/ops/data";
+import { createServerClient } from "@/lib/supabase/client";
 
-const SYSTEM_PROMPT = `Eres el asistente de operaciones back-of-house para TVC (Tiny Village Cartagena), un resort de tiny houses de lujo en la isla Tierra Bomba, Colombia.
+const SYSTEM_PROMPT_BASE = `Eres el asistente de operaciones back-of-house para TVC (Tiny Village Cartagena), un resort de tiny houses de lujo en la isla Tierra Bomba, Colombia.
 
 ## TU ROL
 Eres el bot de conocimiento operacional para el staff. Respondes preguntas sobre:
@@ -33,7 +33,18 @@ Si la pregunta es sobre:
 - Emergencias médicas → Dar protocolo Y decir que contacten a Akil inmediatamente
 - Algo que no sabes → "No tengo esa info todavía. Voy a escalar a Akil."
 
-${STAFF_BOT_KNOWLEDGE}`;
+## INFORMACIÓN DE LANCHAS
+- Salidas desde Cartagena: 3:00 PM, 6:30 PM
+- Salidas desde TVC: 8:00 AM, 11:00 AM
+- Punto de encuentro: Muelle Pegasus
+- Lancha privada disponible 24/7 (costo adicional)
+
+## CONTACTOS DE EMERGENCIA
+- Emergencias Colombia: 123
+- Gerente (Akil): +57 316 055 1387
+
+## CONOCIMIENTO ADICIONAL
+`;
 
 export async function POST(request: NextRequest) {
   // Check if API key is configured
@@ -63,6 +74,96 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createServerClient();
+
+    // Search SOP library for relevant content
+    let sopContext = "";
+    try {
+      const { data: sopResults } = await supabase.rpc("search_sop", {
+        query: message,
+        lang: "es",
+      });
+
+      if (sopResults && sopResults.length > 0) {
+        sopContext = sopResults
+          .slice(0, 3)
+          .map(
+            (sop: { title_es: string; content_es: string }) =>
+              `### ${sop.title_es}\n${sop.content_es}`,
+          )
+          .join("\n\n---\n\n");
+      }
+    } catch (e) {
+      console.log("[StaffBot] search_sop not available, using fallback", e);
+      // Fallback: direct query to sop_library
+      const { data: sopData } = await supabase
+        .from("sop_library")
+        .select("title_es, content_es")
+        .limit(5);
+
+      if (sopData) {
+        sopContext = sopData
+          .map((sop) => `### ${sop.title_es}\n${sop.content_es}`)
+          .join("\n\n---\n\n");
+      }
+    }
+
+    // Get menu items if food-related query
+    const foodKeywords = [
+      "receta",
+      "recipe",
+      "preparar",
+      "hacer",
+      "ingrediente",
+      "plato",
+      "dish",
+      "mojito",
+      "margarita",
+      "cocktail",
+      "coctel",
+      "bebida",
+    ];
+    const isFoodQuery = foodKeywords.some((kw) =>
+      message.toLowerCase().includes(kw),
+    );
+
+    let menuContext = "";
+    if (isFoodQuery) {
+      const { data: menuItems } = await supabase
+        .from("menu_items")
+        .select("name_es, description_es, price, allergens, dietary_tags")
+        .eq("is_active", true)
+        .limit(10);
+
+      if (menuItems && menuItems.length > 0) {
+        menuContext =
+          "\n\n### Menú y Recetas:\n" +
+          menuItems
+            .map((item) => {
+              let itemText = `- **${item.name_es}** ($${item.price?.toLocaleString()} COP)`;
+              if (item.description_es) {
+                itemText += `: ${item.description_es}`;
+              }
+              if (
+                item.allergens &&
+                Array.isArray(item.allergens) &&
+                item.allergens.length > 0
+              ) {
+                itemText += ` [Alérgenos: ${(item.allergens as string[]).join(", ")}]`;
+              }
+              return itemText;
+            })
+            .join("\n");
+      }
+    }
+
+    // Build complete system prompt
+    const systemPrompt =
+      SYSTEM_PROMPT_BASE +
+      (sopContext ||
+        "No se encontró información específica en la base de conocimiento.") +
+      menuContext;
+
     // Build messages array with history
     const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
@@ -84,9 +185,9 @@ export async function POST(request: NextRequest) {
     });
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 500,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages,
     });
 
@@ -94,6 +195,19 @@ export async function POST(request: NextRequest) {
       response.content[0].type === "text"
         ? response.content[0].text
         : "Lo siento, tuve un problema. Por favor contacta a Akil: +57 316 055 1387";
+
+    // Log conversation to database
+    try {
+      await supabase.from("conversations").insert({
+        channel: "web",
+        contact_type: "staff",
+        contact_name: "Staff Member",
+        language: "es",
+        status: "resolved",
+      });
+    } catch (e) {
+      console.log("[StaffBot] Failed to log conversation", e);
+    }
 
     return NextResponse.json({
       response: responseText,

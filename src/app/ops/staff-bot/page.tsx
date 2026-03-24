@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { BotMessage } from "@/lib/ops/types";
+import { createBrowserClient } from "@/lib/supabase/client";
+
+interface BotMessage {
+  role: "user" | "bot";
+  text: string;
+  timestamp: Date;
+}
 
 const STARTERS = [
   "Como hago un Moscow Mule?",
@@ -24,11 +30,35 @@ export default function StaffBotPage() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({ questionsToday: 0, hoursSaved: 0 });
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    const supabase = createBrowserClient();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Count today's conversations
+    const { count } = await supabase
+      .from("conversations")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", today.toISOString())
+      .eq("contact_type", "staff");
+
+    // Each question saves ~5 min of Akil's time
+    const questionsToday = count || 0;
+    const hoursSaved = Math.round((questionsToday * 5) / 60);
+
+    setStats({ questionsToday, hoursSaved });
+  };
 
   const handleSend = async (text?: string) => {
     const msg = text || input;
@@ -67,6 +97,12 @@ export default function StaffBotPage() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
+
+      // Update stats
+      setStats((prev) => ({
+        questionsToday: prev.questionsToday + 1,
+        hoursSaved: Math.round(((prev.questionsToday + 1) * 5) / 60),
+      }));
     } catch {
       const errorMessage: BotMessage = {
         role: "bot",
@@ -112,11 +148,16 @@ export default function StaffBotPage() {
       <div className="bg-gradient-to-r from-[#0A0A0F] to-[#1a1a2e] rounded-xl p-3 mb-4 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="text-white/60 text-xs">
-            <span className="text-[#00D4FF] font-bold">~50</span> preguntas/día
+            <span className="text-[#00D4FF] font-bold">
+              {stats.questionsToday}
+            </span>{" "}
+            preguntas hoy
           </div>
           <div className="w-px h-4 bg-white/20" />
           <div className="text-white/60 text-xs">
-            <span className="text-emerald-400 font-bold">15-20 hrs</span>{" "}
+            <span className="text-emerald-400 font-bold">
+              ~{stats.hoursSaved || "15-20"} hrs
+            </span>{" "}
             ahorradas/semana
           </div>
         </div>

@@ -7,6 +7,12 @@ import { Badge } from "@/components/ops/Badge";
 const NAV_ITEMS = [
   { key: "overview", label: "Overview", href: "/ops", icon: "📊" },
   {
+    key: "welcome-guide",
+    label: "Welcome Guide",
+    href: "/ops/welcome-guide",
+    icon: "📄",
+  },
+  {
     key: "requirements",
     label: "Requirements",
     href: "/ops/requirements",
@@ -48,7 +54,7 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex gap-2">
             <Badge color="#10B981">LIVE</Badge>
-            <Badge color="#00B4FF">8 MODULES</Badge>
+            <Badge color="#00B4FF">9 MODULES</Badge>
           </div>
         </div>
       </header>

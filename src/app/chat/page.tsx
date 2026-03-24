@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
-  isTyping?: boolean;
 }
 
-// Simulate realistic typing speed (fast typer: 60-80 WPM = ~80-120ms per word)
-const TYPING_SPEED_MS_PER_WORD = 90;
-const TYPING_VARIANCE_MS = 40; // Add randomness
+// Simulate realistic typing time (fast typer: ~80ms per word + base delay)
+const calculateTypingDelay = (text: string) => {
+  const words = text.split(" ").length;
+  const baseDelay = 800; // Minimum "thinking" time
+  const perWordDelay = 80; // ~75 WPM typing speed
+  const variance = Math.random() * 600; // Random 0-600ms variance
+  return baseDelay + words * perWordDelay + variance;
+};
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [typingText, setTypingText] = useState("");
-  const [isTypingMessage, setIsTypingMessage] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,50 +30,17 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, typingText]);
+  }, [messages, isTyping]);
 
-  // Cleanup typing animation on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (typingRef.current) clearTimeout(typingRef.current);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, []);
 
-  // Simulate typing effect word by word
-  const simulateTyping = useCallback(
-    (fullText: string, onComplete: () => void) => {
-      const words = fullText.split(" ");
-      let currentIndex = 0;
-      setTypingText("");
-      setIsTypingMessage(true);
-
-      const typeNextWord = () => {
-        if (currentIndex < words.length) {
-          const currentText = words.slice(0, currentIndex + 1).join(" ");
-          setTypingText(currentText);
-          currentIndex++;
-
-          // Random delay to feel more human
-          const delay =
-            TYPING_SPEED_MS_PER_WORD +
-            (Math.random() * TYPING_VARIANCE_MS * 2 - TYPING_VARIANCE_MS);
-          typingRef.current = setTimeout(typeNextWord, delay);
-        } else {
-          // Typing complete
-          setIsTypingMessage(false);
-          setTypingText("");
-          onComplete();
-        }
-      };
-
-      // Small initial delay before starting to type
-      typingRef.current = setTimeout(typeNextWord, 300);
-    },
-    [],
-  );
-
   const sendMessage = async () => {
-    if (!input.trim() || loading || isTypingMessage) return;
+    if (!input.trim() || loading || isTyping) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -91,13 +61,17 @@ export default function ChatPage() {
       setLoading(false);
 
       if (data.reply) {
-        // Start typing simulation
-        simulateTyping(data.reply, () => {
+        // Show typing indicator for realistic duration based on message length
+        setIsTyping(true);
+        const typingDelay = calculateTypingDelay(data.reply);
+
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsTyping(false);
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: data.reply },
           ]);
-        });
+        }, typingDelay);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -146,7 +120,7 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Welcome message */}
-          {messages.length === 0 && !isTypingMessage && (
+          {messages.length === 0 && !loading && !isTyping && (
             <div className="text-center py-12">
               <div className="w-20 h-20 bg-tvc-turquoise/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-4xl">🌴</span>
@@ -198,38 +172,24 @@ export default function ChatPage() {
             </div>
           ))}
 
-          {/* Loading indicator - waiting for response */}
-          {loading && !isTypingMessage && (
+          {/* Typing indicator - shows while waiting for response or "typing" */}
+          {(loading || isTyping) && (
             <div className="flex justify-start">
               <div className="bg-admin-surface border border-admin-border rounded-2xl rounded-bl-sm px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-white/60 text-sm">
-                    Valentina is typing
-                  </span>
+                  <span className="text-white/60 text-sm">Valentina</span>
                   <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-tvc-turquoise rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-tvc-turquoise rounded-full animate-bounce" />
                     <span
-                      className="w-1.5 h-1.5 bg-tvc-turquoise rounded-full animate-bounce"
-                      style={{ animationDelay: "0.1s" }}
+                      className="w-2 h-2 bg-tvc-turquoise rounded-full animate-bounce"
+                      style={{ animationDelay: "0.15s" }}
                     />
                     <span
-                      className="w-1.5 h-1.5 bg-tvc-turquoise rounded-full animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
+                      className="w-2 h-2 bg-tvc-turquoise rounded-full animate-bounce"
+                      style={{ animationDelay: "0.3s" }}
                     />
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Typing simulation - showing message being typed */}
-          {isTypingMessage && typingText && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-admin-surface border border-admin-border text-white rounded-bl-sm">
-                <p className="whitespace-pre-wrap">
-                  {typingText}
-                  <span className="inline-block w-0.5 h-4 bg-tvc-turquoise ml-0.5 animate-pulse" />
-                </p>
               </div>
             </div>
           )}
@@ -248,11 +208,11 @@ export default function ChatPage() {
             onKeyDown={handleKeyPress}
             placeholder="escríbele a Valentina..."
             className="flex-1 bg-admin-surface border border-admin-border rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:border-tvc-turquoise focus:outline-none"
-            disabled={loading || isTypingMessage}
+            disabled={loading || isTyping}
           />
           <button
             onClick={sendMessage}
-            disabled={loading || isTypingMessage || !input.trim()}
+            disabled={loading || isTyping || !input.trim()}
             className="px-6 py-3 bg-tvc-turquoise text-tvc-void font-semibold rounded-xl hover:bg-tvc-turquoise/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Send

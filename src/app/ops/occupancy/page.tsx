@@ -1,49 +1,175 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { StatCard } from "@/components/ops/StatCard";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { TRANSPORT, CONSUMPTION } from "@/lib/ops/data";
-import {
-  generateInitialOccupancy,
-  calculateTransportCost,
-  calculateTotalSupplyCost,
-  findPeakDay,
-} from "@/lib/ops/calculations";
-import type { DayOccupancy } from "@/lib/ops/types";
+import type { Tables } from "@/types/database";
+
+type DailyOccupancy = Tables<"daily_occupancy">;
+
+interface DayOccupancy {
+  date: Date;
+  dateString: string;
+  shortDay: string;
+  guests: number;
+  checkIns: number;
+  checkOuts: number;
+  dbId?: string;
+}
 
 const WINDOW_OPTIONS = [3, 5, 7, 14];
 
 export default function OccupancyPage() {
-  const [days, setDays] = useState<DayOccupancy[]>(generateInitialOccupancy);
+  const [days, setDays] = useState<DayOccupancy[]>([]);
   const [purchaseWindow, setPurchaseWindow] = useState(3);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const updateGuests = (idx: number, val: number) => {
-    setDays((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], guests: Math.max(0, Math.min(42, val)) };
-      return next;
-    });
+  useEffect(() => {
+    loadOccupancyData();
+  }, []);
+
+  const loadOccupancyData = async () => {
+    const supabase = createBrowserClient();
+    const today = new Date();
+
+    // Generate 14 days starting from today
+    const generatedDays: DayOccupancy[] = [];
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      generatedDays.push({
+        date,
+        dateString: date.toISOString().split("T")[0],
+        shortDay: date.toLocaleDateString("en-US", { weekday: "short" }),
+        guests: 0,
+        checkIns: 0,
+        checkOuts: 0,
+      });
+    }
+
+    // Fetch existing occupancy data from Supabase
+    const startDate = today.toISOString().split("T")[0];
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 14);
+
+    const { data: occupancyData, error } = await supabase
+      .from("daily_occupancy")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate.toISOString().split("T")[0]);
+
+    if (error) {
+      console.error("[loadOccupancyData]", error);
+    }
+
+    // Merge DB data with generated days
+    if (occupancyData) {
+      for (const dbRecord of occupancyData) {
+        const idx = generatedDays.findIndex(
+          (d) => d.dateString === dbRecord.date,
+        );
+        if (idx !== -1) {
+          generatedDays[idx] = {
+            ...generatedDays[idx],
+            guests: dbRecord.guests_count,
+            checkIns: dbRecord.check_ins || 0,
+            checkOuts: dbRecord.check_outs || 0,
+            dbId: dbRecord.id,
+          };
+        }
+      }
+    }
+
+    setDays(generatedDays);
+    setLoading(false);
+  };
+
+  const updateGuests = async (idx: number, val: number) => {
+    const newDays = [...days];
+    const newGuests = Math.max(0, Math.min(42, val));
+    newDays[idx] = { ...newDays[idx], guests: newGuests };
+    setDays(newDays);
+
+    // Auto-save to database
+    setSaving(true);
+    const supabase = createBrowserClient();
+    const day = newDays[idx];
+
+    const { error } = await supabase.from("daily_occupancy").upsert(
+      {
+        date: day.dateString,
+        guests_count: newGuests,
+        check_ins: day.checkIns,
+        check_outs: day.checkOuts,
+        person_nights: newGuests,
+        consumption_events: newGuests * 2,
+      },
+      { onConflict: "date" },
+    );
+
+    if (error) {
+      console.error("[updateGuests]", error);
+    }
+    setSaving(false);
   };
 
   // Calculations
   const windowDays = days.slice(0, purchaseWindow);
   const totalPN = windowDays.reduce((s, d) => s + d.guests, 0);
-  const peakDay = findPeakDay(windowDays);
-  const avgOccupancy = Math.round(totalPN / purchaseWindow);
-  const transportCost = calculateTransportCost(purchaseWindow);
-  const totalCost = calculateTotalSupplyCost(totalPN, transportCost);
+  const peakDay = windowDays.reduce(
+    (max, d, i) =>
+      d.guests > max.guests
+        ? {
+            guests: d.guests,
+            label: d.shortDay + " " + d.date.getDate(),
+            index: i,
+          }
+        : max,
+    { guests: 0, label: "N/A", index: -1 },
+  );
+  const avgOccupancy = Math.round(totalPN / purchaseWindow) || 0;
   const tripsNeeded = Math.ceil(purchaseWindow / 3);
   const singleTripCost = TRANSPORT.boatFuelPerTrip + TRANSPORT.staffTimePerTrip;
+  const transportCost = tripsNeeded * singleTripCost;
+
+  const calculateTotalSupplyCost = () => {
+    let total = 0;
+    Object.values(CONSUMPTION).forEach((items) => {
+      items.forEach((item) => {
+        total += Math.ceil(item.perPN * totalPN) * item.costPer;
+      });
+    });
+    return total + transportCost;
+  };
+
+  const totalCost = calculateTotalSupplyCost();
 
   const today = new Date();
   const orderByDate = new Date(today.getTime() - 48 * 60 * 60 * 1000);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-2 border-[#00B4FF] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-extrabold">
-          📅 Daily Occupancy & Consumption Engine
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-extrabold">
+            📅 Daily Occupancy & Consumption Engine
+          </h1>
+          {saving && (
+            <span className="text-xs text-[#00B4FF] font-medium animate-pulse">
+              Saving...
+            </span>
+          )}
+        </div>
         <p className="text-slate-500 text-xs mt-1">
           Occupancy changes daily. Edit each day&apos;s guest count. Pick a
           purchase window. Get exact quantities with transport costs included.
