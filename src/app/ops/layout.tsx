@@ -28,7 +28,18 @@ const NAV_ITEMS = [
     href: "/ops/booking-bot",
     icon: "🤝",
   },
-  { key: "housekeeping", label: "QC", href: "/ops/housekeeping", icon: "🧹" },
+  {
+    key: "housekeeping",
+    label: "Housekeeping QC",
+    href: "/ops/housekeeping",
+    icon: "🧹",
+  },
+  {
+    key: "maintenance",
+    label: "Maintenance QC",
+    href: "/ops/maintenance",
+    icon: "🔧",
+  },
 ];
 
 export default function OpsLayout({ children }: { children: React.ReactNode }) {
