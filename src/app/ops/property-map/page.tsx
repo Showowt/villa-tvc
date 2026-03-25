@@ -1,34 +1,44 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
 
 // ═══════════════════════════════════════════════════════════════
-// TVC INTERACTIVE PROPERTY MAP — Production Component
-// Built from actual architectural plans (D. Arqui Restauro S.A.S)
-// Plano N: 02 DE 31 | Fecha 3/4/2020
+// TVC PROPERTY MAP — COMPLETE OPERATIONS INTERFACE
+// Villa colors from architectural blueprint (D. Arqui Restauro S.A.S)
+// Full guest management, status toggling, workflows
 // ═══════════════════════════════════════════════════════════════
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseAny = any;
 
 interface Villa {
-  id: number;
-  dbId: string;
+  id: string;
   name: string;
   type: string;
+  zone: string;
+  maxGuests: number;
+  beds: string;
+  sofa: boolean;
+  color: string;
   x: number;
   y: number;
-  angle: number;
-  labelColor: string;
-  beds: number;
-  sofa: boolean;
-  maxGuests: number;
-  zone: string;
-  ada?: boolean;
+  accessible: boolean;
 }
 
-interface VillaStatus {
+interface Guest {
+  name: string;
+  guests: number;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  phone: string;
+  allergies: string[];
+  vip: boolean;
+  notes: string;
+}
+
+interface VillaState {
   status:
     | "occupied"
     | "vacant"
@@ -36,369 +46,511 @@ interface VillaStatus {
     | "cleaning"
     | "checkout"
     | "maintenance";
-  guests: string | null;
-  guestCount: number;
-  checkIn: string | null;
-  checkOut: string | null;
-  cleaning: "pending" | "in_progress" | "submitted" | "approved" | "rejected";
-  maintenance: "ok" | "ac_check" | "plumbing" | "electrical" | "other";
-  vipLevel?: "standard" | "vip" | "vvip";
+  cleaningState: "pending" | "in_progress" | "submitted" | "approved";
+  guest: Guest | null;
+  maintenanceNotes: string;
+  maintenanceUrgent: boolean;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// VILLA COLORS — Exact match to D. Arqui Restauro S.A.S Blueprint
-// ═══════════════════════════════════════════════════════════════
-const VILLA_COLORS = {
-  yellow: "#FACC15", // Teresa, Aduana — Yellow labels
-  red: "#DC2626", // Trinidad — Red label
-  pink: "#EC4899", // Paz, San Pedro, Coche — Pink/Magenta labels
-  gray: "#6B7280", // San Diego — No color on blueprint (plain text)
-  blue: "#2563EB", // Pozo, Santo Domingo, Merced — Blue labels
-};
+interface Facility {
+  id: string;
+  name: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+}
 
-// Villa data from architectural plans — exact positions from blueprint
-// Positions based on D. Arqui Restauro S.A.S layout (viewBox 0 0 100 80)
+// Villa data from architectural blueprint — colors match the ACTUAL labels
 const VILLAS: Villa[] = [
-  // ════ NORTH ROW (Near Dock/Muelle) ════
   {
-    id: 1,
-    dbId: "villa_1",
-    name: "Villa Teresa",
+    id: "teresa",
+    name: "Teresa",
     type: "Bungalow Tipo B",
-    x: 28,
-    y: 16,
-    angle: -25,
-    labelColor: VILLA_COLORS.yellow,
-    beds: 2,
-    sofa: false,
+    zone: "NORTH",
     maxGuests: 4,
-    zone: "north",
+    beds: "2 dobles",
+    sofa: false,
+    color: "#2E8B57",
+    x: 26,
+    y: 22,
+    accessible: false,
   },
   {
-    id: 2,
-    dbId: "villa_2",
-    name: "Villa Aduana",
+    id: "aduana",
+    name: "Aduana",
+    type: "Bungalow Tipo A",
+    zone: "NORTH",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#DAA520",
+    x: 40,
+    y: 18,
+    accessible: false,
+  },
+  {
+    id: "trinidad",
+    name: "Trinidad",
     type: "Bungalow Tipo B",
-    x: 42,
-    y: 14,
-    angle: -10,
-    labelColor: VILLA_COLORS.yellow,
-    beds: 2,
-    sofa: true,
-    maxGuests: 5,
-    zone: "north",
+    zone: "NORTH",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#E85D3A",
+    x: 54,
+    y: 15,
+    accessible: false,
   },
   {
-    id: 3,
-    dbId: "villa_3",
-    name: "Villa Trinidad",
+    id: "paz",
+    name: "Paz",
     type: "Bungalow Tipo A",
-    x: 56,
-    y: 13,
-    angle: 0,
-    labelColor: VILLA_COLORS.red,
-    beds: 2,
-    sofa: true,
-    maxGuests: 5,
-    zone: "north",
+    zone: "EAST",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#E878A0",
+    x: 68,
+    y: 24,
+    accessible: false,
   },
-  // ════ EAST SIDE (Right) ════
   {
-    id: 4,
-    dbId: "villa_4",
-    name: "Villa Paz",
+    id: "sanpedro",
+    name: "San Pedro",
     type: "Bungalow Tipo A",
+    zone: "EAST",
+    maxGuests: 5,
+    beds: "2 dobles",
+    sofa: true,
+    color: "#C040A0",
     x: 78,
-    y: 20,
-    angle: 15,
-    labelColor: VILLA_COLORS.pink,
-    beds: 2,
-    sofa: false,
-    maxGuests: 4,
-    zone: "east",
-  },
-  {
-    id: 5,
-    dbId: "villa_5",
-    name: "Villa San Pedro",
-    type: "Bungalow Tipo B",
-    x: 82,
     y: 32,
-    angle: 20,
-    labelColor: VILLA_COLORS.pink,
-    beds: 2,
-    sofa: true,
-    maxGuests: 5,
-    zone: "east",
+    accessible: false,
   },
   {
-    id: 6,
-    dbId: "villa_6",
-    name: "Villa San Diego",
-    type: "Bungalow Tipo A",
-    x: 80,
-    y: 46,
-    angle: 10,
-    labelColor: VILLA_COLORS.gray,
-    beds: 2,
-    sofa: false,
-    maxGuests: 4,
-    zone: "east",
-  },
-  // ════ SOUTH SIDE ════
-  {
-    id: 7,
-    dbId: "villa_7",
-    name: "Villa Coche",
-    type: "Bungalow Tipo C",
-    x: 76,
-    y: 60,
-    angle: 0,
-    labelColor: VILLA_COLORS.pink,
-    beds: 2,
-    sofa: false,
-    maxGuests: 4,
-    zone: "south",
-    ada: true, // Accesibilidad reducida
-  },
-  // ════ WEST SIDE (Left) ════
-  {
-    id: 8,
-    dbId: "villa_8",
-    name: "Villa Pozo",
+    id: "sandiego",
+    name: "San Diego",
     type: "Bungalow Tipo B",
+    zone: "EAST",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#E8A0C0",
+    x: 82,
+    y: 45,
+    accessible: false,
+  },
+  {
+    id: "pozo",
+    name: "Pozo",
+    type: "Bungalow Tipo A",
+    zone: "WEST",
+    maxGuests: 5,
+    beds: "2 dobles",
+    sofa: true,
+    color: "#00BCD4",
     x: 22,
-    y: 34,
-    angle: -15,
-    labelColor: VILLA_COLORS.blue,
-    beds: 2,
-    sofa: false,
-    maxGuests: 4,
-    zone: "west",
+    y: 40,
+    accessible: false,
   },
   {
-    id: 9,
-    dbId: "villa_9",
-    name: "Villa Santo Domingo",
-    type: "Bungalow Tipo A",
-    x: 28,
-    y: 50,
-    angle: -5,
-    labelColor: VILLA_COLORS.blue,
-    beds: 2,
-    sofa: true,
-    maxGuests: 5,
-    zone: "west",
-  },
-  {
-    id: 10,
-    dbId: "villa_10",
-    name: "Villa Merced",
+    id: "santodomingo",
+    name: "Santo Domingo",
     type: "Bungalow Tipo B",
-    x: 24,
-    y: 66,
-    angle: 0,
-    labelColor: VILLA_COLORS.blue,
-    beds: 2,
-    sofa: false,
+    zone: "SOUTH",
     maxGuests: 4,
-    zone: "south",
+    beds: "2 dobles",
+    sofa: false,
+    color: "#D32F2F",
+    x: 30,
+    y: 55,
+    accessible: false,
+  },
+  {
+    id: "merced",
+    name: "Merced",
+    type: "Bungalow Tipo C",
+    zone: "SOUTH",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#D32F2F",
+    x: 24,
+    y: 68,
+    accessible: false,
+  },
+  {
+    id: "coche",
+    name: "Coche",
+    type: "Bungalow Accesible",
+    zone: "SOUTH",
+    maxGuests: 4,
+    beds: "2 dobles",
+    sofa: false,
+    color: "#1565C0",
+    x: 72,
+    y: 62,
+    accessible: true,
+  },
+];
+
+const FACILITIES: Facility[] = [
+  {
+    id: "muelle",
+    name: "MUELLE",
+    label: "Dock",
+    x: 38,
+    y: 4,
+    w: 14,
+    h: 5,
+    color: "#5D4E37",
+  },
+  {
+    id: "restaurante",
+    name: "RESTAURANTE",
+    label: "& Bar",
+    x: 36,
+    y: 42,
+    w: 16,
+    h: 10,
+    color: "#37474F",
+  },
+  {
+    id: "piscina",
+    name: "PISCINA",
+    label: "",
+    x: 55,
+    y: 42,
+    w: 12,
+    h: 8,
+    color: "#0097A7",
+  },
+  {
+    id: "recepcion",
+    name: "RECEPCIÓN",
+    label: "",
+    x: 36,
+    y: 52,
+    w: 8,
+    h: 4,
+    color: "#546E7A",
+  },
+  {
+    id: "terraza",
+    name: "TERRAZA",
+    label: "",
+    x: 44,
+    y: 52,
+    w: 8,
+    h: 4,
+    color: "#546E7A",
+  },
+  {
+    id: "admin",
+    name: "ADMIN",
+    label: "& Taller",
+    x: 34,
+    y: 58,
+    w: 8,
+    h: 5,
+    color: "#5D4E37",
+  },
+  {
+    id: "kiosco",
+    name: "KIOSCO",
+    label: "",
+    x: 56,
+    y: 58,
+    w: 8,
+    h: 5,
+    color: "#5D4E37",
+  },
+  {
+    id: "banos",
+    name: "BAÑOS",
+    label: "",
+    x: 50,
+    y: 58,
+    w: 6,
+    h: 4,
+    color: "#546E7A",
   },
 ];
 
 const STATUS_CONFIG = {
   occupied: {
+    label: "Ocupada",
+    labelEn: "Occupied",
     color: "#10B981",
-    bg: "#ECFDF5",
-    border: "#10B981",
-    label: "Occupied",
-    labelEs: "Ocupada",
     icon: "🟢",
-    pulse: false,
+    bg: "#ECFDF5",
   },
   vacant: {
-    color: "#94A3B8",
-    bg: "#F8FAFC",
-    border: "#CBD5E1",
-    label: "Vacant",
-    labelEs: "Vacía",
+    label: "Vacía",
+    labelEn: "Vacant",
+    color: "#9CA3AF",
     icon: "⚪",
-    pulse: false,
+    bg: "#F9FAFB",
   },
   arriving: {
-    color: "#0066CC",
-    bg: "#EBF5FF",
-    border: "#0066CC",
-    label: "Arriving Today",
-    labelEs: "Llegada Hoy",
+    label: "Llegada Hoy",
+    labelEn: "Arriving",
+    color: "#3B82F6",
     icon: "🔵",
-    pulse: true,
+    bg: "#EFF6FF",
   },
   cleaning: {
+    label: "Limpieza",
+    labelEn: "Cleaning",
     color: "#F59E0B",
-    bg: "#FFFBEB",
-    border: "#F59E0B",
-    label: "Cleaning",
-    labelEs: "Limpieza",
     icon: "🟡",
-    pulse: true,
+    bg: "#FFFBEB",
   },
   checkout: {
+    label: "Salida Hoy",
+    labelEn: "Checkout",
     color: "#EF4444",
-    bg: "#FFF1F2",
-    border: "#EF4444",
-    label: "Check-out Today",
-    labelEs: "Salida Hoy",
     icon: "🔴",
-    pulse: true,
+    bg: "#FEF2F2",
   },
   maintenance: {
+    label: "Mantenimiento",
+    labelEn: "Maintenance",
     color: "#8B5CF6",
-    bg: "#F5F3FF",
-    border: "#8B5CF6",
-    label: "Maintenance",
-    labelEs: "Mantenimiento",
     icon: "🟣",
-    pulse: true,
+    bg: "#F5F3FF",
   },
 };
 
-const CLEANING_STATUS = {
-  pending: { label: "Not Started", labelEs: "Sin Iniciar", color: "#94A3B8" },
-  in_progress: {
-    label: "In Progress",
-    labelEs: "En Progreso",
-    color: "#F59E0B",
-  },
-  submitted: {
-    label: "Awaiting Approval",
-    labelEs: "Esperando Aprobación",
-    color: "#0066CC",
-  },
-  approved: {
-    label: "Guest Ready",
-    labelEs: "Lista para Huésped",
-    color: "#10B981",
-  },
-  rejected: {
-    label: "Needs Re-clean",
-    labelEs: "Requiere Re-limpieza",
-    color: "#EF4444",
-  },
+const CLEANING_STATES = {
+  pending: { label: "Pendiente", color: "#EF4444" },
+  in_progress: { label: "En Proceso", color: "#F59E0B" },
+  submitted: { label: "Enviada — Esperando Aprobación", color: "#3B82F6" },
+  approved: { label: "Lista para Huésped", color: "#10B981" },
 };
 
+// Badge component
+const Badge = ({
+  children,
+  color,
+  small,
+}: {
+  children: React.ReactNode;
+  color: string;
+  small?: boolean;
+}) => (
+  <span
+    style={{
+      background: `${color}20`,
+      color,
+      padding: small ? "1px 6px" : "2px 10px",
+      borderRadius: 12,
+      fontSize: small ? 9 : 10,
+      fontWeight: 700,
+      letterSpacing: 0.3,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 3,
+      whiteSpace: "nowrap",
+    }}
+  >
+    {children}
+  </span>
+);
+
+// Action button component
+const ActionBtn = ({
+  children,
+  color = "#0066CC",
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  color?: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      padding: "8px 14px",
+      borderRadius: 8,
+      border: `1px solid ${color}30`,
+      background: disabled ? "#F1F5F9" : `${color}08`,
+      color: disabled ? "#999" : color,
+      fontSize: 12,
+      fontWeight: 700,
+      cursor: disabled ? "not-allowed" : "pointer",
+      transition: "all 0.15s",
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      width: "100%",
+      opacity: disabled ? 0.5 : 1,
+      fontFamily: "inherit",
+    }}
+  >
+    {children}
+  </button>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
 export default function TVCPropertyMap() {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [filter, setFilter] = useState<string>("all");
-  const [time, setTime] = useState(new Date());
-  const [showPanel, setShowPanel] = useState(false);
-  const [villaStatuses, setVillaStatuses] = useState<{
-    [key: number]: VillaStatus;
-  }>({});
+  const [villaStates, setVillaStates] = useState<{ [key: string]: VillaState }>(
+    {},
+  );
+  const [selectedVilla, setSelectedVilla] = useState<string | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    guests: 1,
+    checkIn: "",
+    checkOut: "",
+    phone: "",
+    allergies: "",
+    vip: false,
+    notes: "",
+  });
   const [loading, setLoading] = useState(true);
 
+  // Load data from Supabase
   const loadData = useCallback(async () => {
     const supabase = createBrowserClient() as SupabaseAny;
     const today = new Date().toISOString().split("T")[0];
 
-    const { data: statusData } = await supabase
-      .from("villa_status")
-      .select("*");
-    const { data: bookingData } = await supabase
-      .from("villa_bookings")
-      .select("*")
-      .in("status", ["confirmed", "checked_in"])
-      .lte("check_in", today)
-      .gte("check_out", today);
-
-    const newStatuses: { [key: number]: VillaStatus } = {};
-
+    // Initialize all villas with default state
+    const newStates: { [key: string]: VillaState } = {};
     VILLAS.forEach((v) => {
-      newStatuses[v.id] = {
+      newStates[v.id] = {
         status: "vacant",
-        guests: null,
-        guestCount: 0,
-        checkIn: null,
-        checkOut: null,
-        cleaning: "approved",
-        maintenance: "ok",
+        cleaningState: "approved",
+        guest: null,
+        maintenanceNotes: "",
+        maintenanceUrgent: false,
       };
     });
 
-    if (statusData) {
-      statusData.forEach(
-        (s: {
-          villa_id: string;
-          status: string;
-          cleaning_status: string;
-          maintenance_status: string;
-        }) => {
-          const villa = VILLAS.find((v) => v.dbId === s.villa_id);
-          if (villa && newStatuses[villa.id]) {
-            if (s.status === "occupied")
-              newStatuses[villa.id].status = "occupied";
-            else if (s.status === "cleaning")
-              newStatuses[villa.id].status = "cleaning";
-            else if (s.status === "maintenance")
-              newStatuses[villa.id].status = "maintenance";
-            else newStatuses[villa.id].status = "vacant";
+    try {
+      // Fetch villa statuses
+      const { data: statusData } = await supabase
+        .from("villa_status")
+        .select("*");
+      const { data: bookingData } = await supabase
+        .from("villa_bookings")
+        .select("*")
+        .in("status", ["confirmed", "checked_in"])
+        .lte("check_in", today)
+        .gte("check_out", today);
 
-            if (s.cleaning_status === "dirty")
-              newStatuses[villa.id].cleaning = "pending";
-            else if (s.cleaning_status === "in_progress")
-              newStatuses[villa.id].cleaning = "in_progress";
-            else if (s.cleaning_status === "inspected")
-              newStatuses[villa.id].cleaning = "submitted";
-            else newStatuses[villa.id].cleaning = "approved";
+      // Map DB villa IDs to our component IDs
+      const dbIdToId: { [key: string]: string } = {
+        villa_1: "teresa",
+        villa_2: "aduana",
+        villa_3: "trinidad",
+        villa_4: "paz",
+        villa_5: "sanpedro",
+        villa_6: "sandiego",
+        villa_7: "coche",
+        villa_8: "pozo",
+        villa_9: "santodomingo",
+        villa_10: "merced",
+      };
 
-            if (s.maintenance_status !== "ok")
-              newStatuses[villa.id].maintenance = "ac_check";
-          }
-        },
-      );
-    }
+      if (statusData) {
+        statusData.forEach(
+          (s: {
+            villa_id: string;
+            status: string;
+            cleaning_status: string;
+            maintenance_status: string;
+            maintenance_notes?: string;
+          }) => {
+            const villaId = dbIdToId[s.villa_id];
+            if (villaId && newStates[villaId]) {
+              if (s.status === "occupied")
+                newStates[villaId].status = "occupied";
+              else if (s.status === "cleaning")
+                newStates[villaId].status = "cleaning";
+              else if (s.status === "maintenance") {
+                newStates[villaId].status = "maintenance";
+                newStates[villaId].maintenanceNotes = s.maintenance_notes || "";
+              }
 
-    if (bookingData) {
-      bookingData.forEach(
-        (b: {
-          villa_id: string;
-          guest_name: string;
-          num_adults: number;
-          num_children: number;
-          check_in: string;
-          check_out: string;
-          status: string;
-          vip_level?: string;
-        }) => {
-          const villa = VILLAS.find((v) => v.dbId === b.villa_id);
-          if (villa && newStatuses[villa.id]) {
-            newStatuses[villa.id].guests = b.guest_name;
-            newStatuses[villa.id].guestCount = b.num_adults + b.num_children;
-            newStatuses[villa.id].checkIn = new Date(
-              b.check_in,
-            ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            newStatuses[villa.id].checkOut = new Date(
-              b.check_out,
-            ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            newStatuses[villa.id].vipLevel =
-              (b.vip_level as "standard" | "vip" | "vvip") || "standard";
-
-            const checkInDate = b.check_in.split("T")[0];
-            const checkOutDate = b.check_out.split("T")[0];
-
-            if (checkInDate === today && b.status === "confirmed") {
-              newStatuses[villa.id].status = "arriving";
-            } else if (checkOutDate === today) {
-              newStatuses[villa.id].status = "checkout";
-            } else if (b.status === "checked_in") {
-              newStatuses[villa.id].status = "occupied";
+              if (s.cleaning_status === "dirty")
+                newStates[villaId].cleaningState = "pending";
+              else if (s.cleaning_status === "in_progress")
+                newStates[villaId].cleaningState = "in_progress";
+              else if (s.cleaning_status === "inspected")
+                newStates[villaId].cleaningState = "submitted";
+              else newStates[villaId].cleaningState = "approved";
             }
-          }
-        },
-      );
+          },
+        );
+      }
+
+      if (bookingData) {
+        bookingData.forEach(
+          (b: {
+            villa_id: string;
+            guest_name: string;
+            num_adults: number;
+            num_children: number;
+            check_in: string;
+            check_out: string;
+            status: string;
+            vip_level?: string;
+            phone?: string;
+            allergies?: string[];
+            notes?: string;
+          }) => {
+            const villaId = dbIdToId[b.villa_id];
+            if (villaId && newStates[villaId]) {
+              const nights = Math.ceil(
+                (new Date(b.check_out).getTime() -
+                  new Date(b.check_in).getTime()) /
+                  86400000,
+              );
+              newStates[villaId].guest = {
+                name: b.guest_name,
+                guests: b.num_adults + b.num_children,
+                checkIn: b.check_in,
+                checkOut: b.check_out,
+                nights,
+                phone: b.phone || "",
+                allergies: b.allergies || [],
+                vip: b.vip_level === "vip" || b.vip_level === "vvip",
+                notes: b.notes || "",
+              };
+
+              const checkInDate = b.check_in.split("T")[0];
+              const checkOutDate = b.check_out.split("T")[0];
+
+              if (checkInDate === today && b.status === "confirmed") {
+                newStates[villaId].status = "arriving";
+              } else if (checkOutDate === today) {
+                newStates[villaId].status = "checkout";
+              } else if (b.status === "checked_in") {
+                newStates[villaId].status = "occupied";
+              }
+            }
+          },
+        );
+      }
+    } catch (err) {
+      console.error("[PropertyMap] Error loading data:", err);
     }
 
-    setVillaStatuses(newStatuses);
+    setVillaStates(newStates);
     setLoading(false);
   }, []);
 
@@ -423,41 +575,157 @@ export default function TVCPropertyMap() {
     };
   }, [loadData]);
 
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 60000);
-    return () => clearInterval(t);
-  }, []);
-
-  const totalGuests = Object.values(villaStatuses).reduce(
-    (s, v) => s + v.guestCount,
+  const totalGuests = Object.values(villaStates).reduce(
+    (s, v) => s + (v.guest?.guests || 0),
     0,
   );
-  const occupiedCount = Object.values(villaStatuses).filter(
-    (v) => v.status === "occupied" || v.status === "checkout",
+  const occupiedCount = Object.values(villaStates).filter(
+    (v) => v.status === "occupied",
   ).length;
-  const arrivingCount = Object.values(villaStatuses).filter(
-    (v) => v.status === "arriving" || v.status === "cleaning",
+  const arrivingCount = Object.values(villaStates).filter(
+    (v) => v.status === "arriving",
   ).length;
+  const checkoutCount = Object.values(villaStates).filter(
+    (v) => v.status === "checkout",
+  ).length;
+  const cleaningCount = Object.values(villaStates).filter(
+    (v) => v.status === "cleaning",
+  ).length;
+  const maintenanceCount = Object.values(villaStates).filter(
+    (v) => v.status === "maintenance",
+  ).length;
+  const capacity = Math.round((occupiedCount / 10) * 100);
 
-  const filteredVillas =
-    filter === "all"
-      ? VILLAS
-      : VILLAS.filter((v) => {
-          const s = villaStatuses[v.id];
-          return s?.status === filter;
-        });
-
-  const sel = selected
+  const sel = selectedVilla
     ? {
-        villa: VILLAS.find((v) => v.id === selected),
-        status: villaStatuses[selected],
+        ...VILLAS.find((v) => v.id === selectedVilla)!,
+        state: villaStates[selectedVilla],
       }
     : null;
 
+  const updateVilla = (id: string, updates: Partial<VillaState>) => {
+    setVillaStates((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
+  };
+
+  const handleStatusChange = (id: string, newStatus: VillaState["status"]) => {
+    const updates: Partial<VillaState> = { status: newStatus };
+    if (newStatus === "vacant") {
+      updates.guest = null;
+      updates.cleaningState = "pending";
+    }
+    if (newStatus === "cleaning") {
+      updates.cleaningState = "pending";
+    }
+    if (newStatus === "arriving" || newStatus === "occupied") {
+      updates.cleaningState = "approved";
+    }
+    updateVilla(id, updates);
+    setShowStatusModal(false);
+  };
+
+  const handleAssignGuest = () => {
+    if (!selectedVilla || !editForm.name.trim()) return;
+    const nights =
+      editForm.checkIn && editForm.checkOut
+        ? Math.ceil(
+            (new Date(editForm.checkOut).getTime() -
+              new Date(editForm.checkIn).getTime()) /
+              86400000,
+          )
+        : 1;
+    updateVilla(selectedVilla, {
+      status: "occupied",
+      cleaningState: "approved",
+      guest: {
+        name: editForm.name,
+        guests: editForm.guests,
+        checkIn: editForm.checkIn,
+        checkOut: editForm.checkOut,
+        nights,
+        phone: editForm.phone,
+        allergies: editForm.allergies
+          ? editForm.allergies
+              .split(",")
+              .map((a) => a.trim())
+              .filter(Boolean)
+          : [],
+        vip: editForm.vip,
+        notes: editForm.notes,
+      },
+    });
+    setShowAssignModal(false);
+    setEditForm({
+      name: "",
+      guests: 1,
+      checkIn: "",
+      checkOut: "",
+      phone: "",
+      allergies: "",
+      vip: false,
+      notes: "",
+    });
+  };
+
+  const handleMoveGuest = (fromId: string, toId: string) => {
+    const fromState = villaStates[fromId];
+    if (!fromState.guest) return;
+    updateVilla(toId, {
+      status: "occupied",
+      guest: fromState.guest,
+      cleaningState: "approved",
+    });
+    updateVilla(fromId, {
+      status: "vacant",
+      guest: null,
+      cleaningState: "pending",
+    });
+    setSelectedVilla(toId);
+    setShowMoveModal(false);
+  };
+
+  const vacantVillas = VILLAS.filter(
+    (v) => villaStates[v.id]?.status === "vacant" && v.id !== selectedVilla,
+  );
+  const filteredVillas =
+    filter === "all"
+      ? VILLAS
+      : VILLAS.filter((v) => villaStates[v.id]?.status === filter);
+
+  const getNightsRemaining = (guest: Guest | null) => {
+    if (!guest?.checkOut) return null;
+    const diff = Math.ceil(
+      (new Date(guest.checkOut).getTime() - new Date().getTime()) / 86400000,
+    );
+    return Math.max(0, diff);
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-[#00B4FF] border-t-transparent rounded-full" />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: "3px solid #E2E8F0",
+              borderTopColor: "#00B4FF",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              margin: "0 auto 16px",
+            }}
+          />
+          <div style={{ color: "#64748B", fontWeight: 600 }}>
+            Cargando mapa...
+          </div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -466,975 +734,494 @@ export default function TVCPropertyMap() {
     <div
       style={{
         fontFamily: "'DM Sans', -apple-system, sans-serif",
-        background: "#F0F4F0",
+        background: "#F8FAFC",
         minHeight: "100vh",
       }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        /* Villa marker interactions - NO transform/scale to prevent glitches */
-        .villa-marker {
-          cursor: pointer;
-          outline: none;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .villa-marker:hover .villa-bg {
-          filter: brightness(1.08);
-          stroke-width: 0.5;
-        }
-        .villa-marker:hover .villa-label-bg {
-          filter: brightness(1.1);
-        }
-        .villa-marker:active .villa-bg {
-          filter: brightness(0.95);
-        }
-        .villa-marker:focus {
-          outline: none;
-        }
-
-        /* Smooth transitions without layout shifts */
-        .villa-bg, .villa-label-bg {
-          transition: filter 0.15s ease-out, stroke-width 0.15s ease-out;
-          will-change: filter;
-        }
+        * { box-sizing: border-box; margin: 0; }
+        .villa-node { transition: filter 0.2s ease; }
+        .villa-node:hover { filter: brightness(1.05); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .modal { background: white; border-radius: 16px; padding: 24px; max-width: 440px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        input, select, textarea { padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 13px; width: 100%; font-family: inherit; outline: none; }
+        input:focus, textarea:focus { border-color: #00B4FF; box-shadow: 0 0 0 2px rgba(0,180,255,0.15); }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       `}</style>
 
-      {/* Header */}
+      {/* ═══════ TOP BAR ═══════ */}
       <div
         style={{
-          background: "linear-gradient(135deg, #0A0A0F 0%, #1a1a2e 100%)",
-          padding: "14px 20px",
-          borderBottom: "2px solid #00B4FF",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: "linear-gradient(135deg, #00B4FF, #00D4FF)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 13,
-              fontWeight: 900,
-              color: "#0A0A0F",
-            }}
-          >
-            TVC
-          </div>
-          <div>
-            <div style={{ color: "#FFF", fontSize: 15, fontWeight: 800 }}>
-              Property Map — Live Operations
-            </div>
-            <div
-              style={{
-                color: "#00B4FF",
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: 1,
-              }}
-            >
-              TINY VILLAGE CARTAGENA • ISLA TIERRA BOMBA
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span style={{ color: "#10B981", fontSize: 11, fontWeight: 700 }}>
-            ● LIVE
-          </span>
-          <span style={{ color: "#888", fontSize: 11 }}>
-            {time.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        </div>
-      </div>
-
-      {/* Stats Bar */}
-      <div
-        style={{
-          background: "#FFF",
-          padding: "10px 20px",
+          background: "white",
           borderBottom: "1px solid #E2E8F0",
+          padding: "12px 20px",
           display: "flex",
-          gap: 20,
           alignItems: "center",
-          overflowX: "auto",
+          gap: 20,
           flexWrap: "wrap",
         }}
       >
-        {[
-          {
-            label: "Guests On Property",
-            value: totalGuests,
-            color: "#0A0A0F",
-            icon: "👥",
-          },
-          {
-            label: "Villas Occupied",
-            value: `${occupiedCount}/10`,
-            color: "#10B981",
-            icon: "🏠",
-          },
-          {
-            label: "Arriving Today",
-            value: arrivingCount,
-            color: "#0066CC",
-            icon: "✈️",
-          },
-          {
-            label: "Capacity",
-            value: `${Math.round((totalGuests / 42) * 100)}%`,
-            color: totalGuests > 30 ? "#EF4444" : "#F59E0B",
-            icon: "📊",
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minWidth: 120,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>{s.icon}</span>
-            <div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            flex: 1,
+            flexWrap: "wrap",
+          }}
+        >
+          {[
+            ["👥", "Huéspedes", totalGuests, null],
+            [
+              "🏠",
+              "Ocupadas",
+              `${occupiedCount}/10`,
+              occupiedCount > 7 ? "#EF4444" : "#10B981",
+            ],
+            ["✨", "Llegadas", arrivingCount, "#3B82F6"],
+            [
+              "📊",
+              "Capacidad",
+              `${capacity}%`,
+              capacity > 80 ? "#EF4444" : "#10B981",
+            ],
+          ].map(([icon, label, value, color]) => (
+            <div
+              key={String(label)}
+              style={{ textAlign: "center", minWidth: 70 }}
+            >
               <div style={{ fontSize: 10, color: "#64748B", fontWeight: 600 }}>
-                {s.label}
+                {icon} {label}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>
-                {s.value}
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: (color as string) || "#0A0A0F",
+                  marginTop: 2,
+                }}
+              >
+                {value}
               </div>
             </div>
-          </div>
-        ))}
-        <div style={{ flex: 1 }} />
+          ))}
+        </div>
+
+        {/* Filters */}
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {[
-            "all",
-            "occupied",
-            "vacant",
-            "arriving",
-            "cleaning",
-            "checkout",
-          ].map((f) => (
+            ["all", "All", null, 10],
+            ["occupied", "Ocupada", "#10B981", occupiedCount],
+            [
+              "vacant",
+              "Vacía",
+              "#9CA3AF",
+              10 -
+                occupiedCount -
+                arrivingCount -
+                cleaningCount -
+                checkoutCount -
+                maintenanceCount,
+            ],
+            ["arriving", "Llegada", "#3B82F6", arrivingCount],
+            ["cleaning", "Limpieza", "#F59E0B", cleaningCount],
+            ["checkout", "Salida", "#EF4444", checkoutCount],
+            ["maintenance", "Mant.", "#8B5CF6", maintenanceCount],
+          ].map(([key, label, color, count]) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={String(key)}
+              onClick={() => setFilter(String(key))}
               style={{
                 padding: "5px 10px",
                 borderRadius: 6,
                 border: "none",
                 cursor: "pointer",
-                background: filter === f ? "#0A0A0F" : "#F1F5F9",
-                color: filter === f ? "#FFF" : "#64748B",
                 fontSize: 10,
                 fontWeight: 700,
-                textTransform: "capitalize",
+                transition: "all 0.15s",
+                fontFamily: "inherit",
+                background:
+                  filter === key ? (color as string) || "#0A0A0F" : "#F1F5F9",
+                color: filter === key ? "white" : "#64748B",
               }}
             >
-              {f === "all"
-                ? "All"
-                : (STATUS_CONFIG[f as keyof typeof STATUS_CONFIG]?.icon || "") +
-                  " " +
-                  f}
+              {color && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: color as string,
+                    marginRight: 4,
+                  }}
+                />
+              )}
+              {label} {Number(count) > 0 ? `(${count})` : ""}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Map + Detail Panel */}
-      <div
-        style={{
-          display: "flex",
-          height: "calc(100vh - 130px)",
-          overflow: "hidden",
-        }}
-      >
-        {/* SVG MAP */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <svg
-            viewBox="0 0 100 80"
-            preserveAspectRatio="xMidYMid meet"
-            style={{
-              width: "100%",
-              height: "100%",
-              background:
-                "linear-gradient(180deg, #E8F0E4 0%, #D4E4D0 50%, #C8D8C4 100%)",
-            }}
-          >
-            <defs>
-              <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4FA8D1" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#2E86AB" stopOpacity="0.6" />
-              </linearGradient>
-              <linearGradient id="pool" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#38BDF8" />
-                <stop offset="100%" stopColor="#0EA5E9" />
-              </linearGradient>
-              <pattern
-                id="grass"
-                patternUnits="userSpaceOnUse"
-                width="3"
-                height="3"
-              >
-                <circle cx="1" cy="1" r="0.2" fill="#6B8E5A" opacity="0.12" />
-              </pattern>
-              <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-                <feDropShadow
-                  dx="0.2"
-                  dy="0.2"
-                  stdDeviation="0.3"
-                  floodOpacity="0.15"
-                />
-              </filter>
-            </defs>
-
-            {/* Island shape */}
-            <path
-              d="M 8 8 Q 30 4, 55 5 Q 80 4, 92 10 Q 96 20, 94 40 Q 95 55, 90 65 Q 82 74, 60 76 Q 35 78, 18 72 Q 8 65, 6 50 Q 4 30, 8 8 Z"
-              fill="url(#grass)"
-              stroke="#7A9E6A"
-              strokeWidth="0.4"
-              opacity="0.6"
-            />
-
-            {/* Water around island */}
-            <rect
-              x="0"
-              y="0"
-              width="100"
-              height="6"
-              fill="url(#water)"
-              opacity="0.5"
-            />
-
-            {/* Dock (Muelle Existente) */}
-            <g filter="url(#shadow)">
-              <rect
-                x="44"
-                y="2"
-                width="12"
-                height="4"
-                rx="0.3"
-                fill="#8B7355"
-                stroke="#6B5335"
-                strokeWidth="0.2"
-              />
-              <line
-                x1="47"
-                y1="2"
-                x2="47"
-                y2="0"
-                stroke="#6B5335"
-                strokeWidth="0.3"
-              />
-              <line
-                x1="53"
-                y1="2"
-                x2="53"
-                y2="0"
-                stroke="#6B5335"
-                strokeWidth="0.3"
-              />
-              <text
-                x="50"
-                y="4.5"
-                textAnchor="middle"
-                fontSize="1.2"
-                fill="#4A3520"
-                fontWeight="700"
-              >
-                MUELLE
-              </text>
-            </g>
-
-            {/* Pathways (Caminos) */}
-            <path
-              d="M 50 6 Q 50 15, 50 30 Q 50 45, 50 60 Q 50 68, 60 72"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="1"
-              opacity="0.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 50 30 Q 35 30, 25 35"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 50 30 Q 65 32, 78 35"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 50 50 Q 35 52, 26 55"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 50 50 Q 65 52, 75 58"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.4"
-              strokeLinecap="round"
-            />
-
-            {/* Central Building Complex (Casa Principal) */}
-            <g filter="url(#shadow)">
-              {/* Main building - Restaurant/Bar */}
-              <rect
-                x="42"
-                y="32"
-                width="16"
-                height="12"
-                rx="0.5"
-                fill="#E8DCC8"
-                stroke="#B8A888"
-                strokeWidth="0.25"
-              />
-              <rect
-                x="43"
-                y="33"
-                width="14"
-                height="4"
-                rx="0.3"
-                fill="#D4C8B4"
-                stroke="#B8A888"
-                strokeWidth="0.15"
-              />
-              <text
-                x="50"
-                y="35.5"
-                textAnchor="middle"
-                fontSize="1.1"
-                fill="#4A3520"
-                fontWeight="800"
-              >
-                RESTAURANTE
-              </text>
-              <text
-                x="50"
-                y="36.8"
-                textAnchor="middle"
-                fontSize="0.8"
-                fill="#6B5335"
-              >
-                &amp; BAR
-              </text>
-
-              {/* Reception */}
-              <rect
-                x="43"
-                y="38"
-                width="6"
-                height="4"
-                rx="0.2"
-                fill="#DDD0BC"
-                stroke="#B8A888"
-                strokeWidth="0.1"
-              />
-              <text
-                x="46"
-                y="40.5"
-                textAnchor="middle"
-                fontSize="0.7"
-                fill="#6B5335"
-                fontWeight="600"
-              >
-                RECEPCIÓN
-              </text>
-
-              {/* Terraza */}
-              <rect
-                x="50"
-                y="38"
-                width="6"
-                height="4"
-                rx="0.2"
-                fill="#DDD0BC"
-                stroke="#B8A888"
-                strokeWidth="0.1"
-              />
-              <text
-                x="53"
-                y="40.5"
-                textAnchor="middle"
-                fontSize="0.7"
-                fill="#6B5335"
-                fontWeight="600"
-              >
-                TERRAZA
-              </text>
-            </g>
-
-            {/* Pool (Piscina) */}
-            <rect
-              x="60"
-              y="34"
-              width="10"
-              height="6"
-              rx="0.8"
-              fill="url(#pool)"
-              stroke="#0EA5E9"
-              strokeWidth="0.25"
-            />
-            <text
-              x="65"
-              y="37.8"
-              textAnchor="middle"
-              fontSize="1.2"
-              fill="#FFF"
-              fontWeight="800"
-              opacity="0.9"
-            >
-              PISCINA
-            </text>
-
-            {/* Lounge next to pool */}
-            <rect
-              x="60"
-              y="41"
-              width="5"
-              height="3"
-              rx="0.3"
-              fill="#E8DCC8"
-              stroke="#B8A888"
-              strokeWidth="0.15"
-              opacity="0.8"
-            />
-            <text
-              x="62.5"
-              y="43"
-              textAnchor="middle"
-              fontSize="0.6"
-              fill="#6B5335"
-              fontWeight="600"
-            >
-              LOUNGE
-            </text>
-
-            {/* Admin & Taller */}
-            <g filter="url(#shadow)">
-              <rect
-                x="38"
-                y="48"
-                width="8"
-                height="5"
-                rx="0.4"
-                fill="#D4C8B4"
-                stroke="#B8A888"
-                strokeWidth="0.2"
-              />
-              <text
-                x="42"
-                y="50.5"
-                textAnchor="middle"
-                fontSize="0.7"
-                fill="#6B5335"
-                fontWeight="600"
-              >
-                ADMIN
-              </text>
-              <text
-                x="42"
-                y="51.6"
-                textAnchor="middle"
-                fontSize="0.6"
-                fill="#6B5335"
-              >
-                &amp; TALLER
-              </text>
-            </g>
-
-            {/* Kiosko */}
-            <circle
-              cx="68"
-              cy="55"
-              r="2.5"
-              fill="#D4C8B4"
-              stroke="#B8A888"
-              strokeWidth="0.2"
-            />
-            <text
-              x="68"
-              y="55.4"
-              textAnchor="middle"
-              fontSize="0.8"
-              fill="#6B5335"
-              fontWeight="700"
-            >
-              KIOSKO
-            </text>
-
-            {/* Baños (16) */}
-            <rect
-              x="55"
-              y="54"
-              width="4"
-              height="3"
-              rx="0.3"
-              fill="#DDD0BC"
-              stroke="#B8A888"
-              strokeWidth="0.15"
-            />
-            <text
-              x="57"
-              y="56"
-              textAnchor="middle"
-              fontSize="0.6"
-              fill="#6B5335"
-              fontWeight="600"
-            >
-              BAÑOS
-            </text>
-
-            {/* Escalera a Mirador */}
-            <rect
-              x="58"
-              y="32"
-              width="2"
-              height="3"
-              rx="0.15"
-              fill="#C8B898"
-              stroke="#B8A888"
-              strokeWidth="0.1"
-            />
-            <text
-              x="59"
-              y="34"
-              textAnchor="middle"
-              fontSize="0.5"
-              fill="#6B5335"
-            >
-              ↑
-            </text>
-
-            {/* Via de Acceso */}
-            <path
-              d="M 75 68 Q 82 70, 92 72"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="1.5"
-              opacity="0.4"
-              strokeLinecap="round"
-            />
-            <text
-              x="85"
-              y="70"
-              fontSize="0.8"
-              fill="#8B7355"
-              transform="rotate(8, 85, 70)"
-            >
-              VÍA DE ACCESO
-            </text>
-
-            {/* Trees and vegetation */}
-            {[
-              [15, 12],
-              [12, 25],
-              [10, 45],
-              [15, 58],
-              [8, 68],
-              [88, 12],
-              [90, 30],
-              [88, 48],
-              [85, 68],
-              [35, 8],
-              [65, 8],
-              [75, 70],
-              [20, 75],
-            ].map(([tx, ty], i) => (
-              <g key={`tree-${i}`}>
-                <circle
-                  cx={tx}
-                  cy={ty}
-                  r={1.5 + (i % 2) * 0.5}
-                  fill="#4A7A3A"
-                  opacity={0.2 + (i % 3) * 0.05}
-                />
-              </g>
-            ))}
-
-            {/* Palm trees */}
-            {[
-              [38, 25],
-              [62, 25],
-              [72, 28],
-              [28, 42],
-              [72, 48],
-              [55, 65],
-              [32, 72],
-            ].map(([px, py], i) => (
-              <g key={`palm-${i}`}>
-                <line
-                  x1={px}
-                  y1={py}
-                  x2={px}
-                  y2={py - 1.5}
-                  stroke="#8B7355"
-                  strokeWidth="0.25"
-                />
-                <ellipse
-                  cx={px}
-                  cy={py - 2}
-                  rx="1.2"
-                  ry="0.6"
-                  fill="#3D7A2A"
-                  opacity="0.35"
-                />
-              </g>
-            ))}
-
-            {/* Villa markers */}
-            {filteredVillas.map((villa) => {
-              const s = villaStatuses[villa.id] || {
-                status: "vacant",
-                guestCount: 0,
-                cleaning: "approved",
-                maintenance: "ok",
-              };
-              const cfg = STATUS_CONFIG[s.status] || STATUS_CONFIG.vacant;
-              const isFiltered = filter !== "all" && s.status !== filter;
-              const isSelected = selected === villa.id;
-
-              return (
-                <g
-                  key={villa.id}
-                  className="villa-marker"
-                  onClick={() => {
-                    setSelected(villa.id);
-                    setShowPanel(true);
-                  }}
-                  style={{ opacity: isFiltered ? 0.25 : 1 }}
-                >
-                  {/* Pulse ring for active statuses */}
-                  {cfg.pulse && !isFiltered && (
-                    <circle
-                      cx={villa.x}
-                      cy={villa.y}
-                      r="4"
-                      fill="none"
-                      stroke={cfg.color}
-                      strokeWidth="0.25"
-                      opacity="0.5"
-                    >
-                      <animate
-                        attributeName="r"
-                        from="3"
-                        to="5.5"
-                        dur="2s"
-                        repeatCount="indefinite"
-                      />
-                      <animate
-                        attributeName="opacity"
-                        from="0.5"
-                        to="0"
-                        dur="2s"
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                  )}
-
-                  {/* Selection ring */}
-                  {isSelected && (
-                    <circle
-                      cx={villa.x}
-                      cy={villa.y}
-                      r="5"
-                      fill="none"
-                      stroke="#0A0A0F"
-                      strokeWidth="0.35"
-                      strokeDasharray="1,0.5"
-                    >
-                      <animate
-                        attributeName="stroke-dashoffset"
-                        from="0"
-                        to="3"
-                        dur="0.5s"
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                  )}
-
-                  {/* Villa building - using villa's label color */}
-                  <rect
-                    className="villa-bg"
-                    x={villa.x - 3}
-                    y={villa.y - 2}
-                    width="6"
-                    height="4"
-                    rx="0.4"
-                    fill={s.status === "vacant" ? "#F8FAFC" : cfg.bg}
-                    stroke={villa.labelColor}
-                    strokeWidth={isSelected ? "0.5" : "0.3"}
-                    transform={`rotate(${villa.angle}, ${villa.x}, ${villa.y})`}
-                    style={{ transition: "filter 0.2s ease" }}
-                  />
-
-                  {/* Status indicator dot */}
-                  <circle
-                    cx={villa.x + 2.2}
-                    cy={villa.y - 1.2}
-                    r="0.7"
-                    fill={cfg.color}
-                    stroke="#FFF"
-                    strokeWidth="0.15"
-                  />
-
-                  {/* Villa name label background */}
-                  <rect
-                    className="villa-label-bg"
-                    x={villa.x - 5.5}
-                    y={villa.y + 2.5}
-                    width="11"
-                    height="2.8"
-                    rx="0.3"
-                    fill={villa.labelColor}
-                    stroke={villa.labelColor}
-                    strokeWidth="0.1"
-                  />
-
-                  {/* Villa name */}
-                  <text
-                    className="villa-label"
-                    x={villa.x}
-                    y={villa.y + 4.2}
-                    textAnchor="middle"
-                    fontSize="1.1"
-                    fontWeight="700"
-                    fill="#FFF"
-                    fontFamily="DM Sans"
-                    style={{ transition: "font-weight 0.15s ease" }}
-                  >
-                    {villa.name.replace("Villa ", "")}
-                  </text>
-
-                  {/* Guest count badge */}
-                  {s.guestCount > 0 && (
-                    <g>
-                      <circle
-                        cx={villa.x - 2.2}
-                        cy={villa.y - 1.2}
-                        r="0.8"
-                        fill="#0A0A0F"
-                      />
-                      <text
-                        x={villa.x - 2.2}
-                        y={villa.y - 0.9}
-                        textAnchor="middle"
-                        fontSize="0.75"
-                        fill="#FFF"
-                        fontWeight="800"
-                      >
-                        {s.guestCount}
-                      </text>
-                    </g>
-                  )}
-
-                  {/* VIP badge */}
-                  {s.vipLevel && s.vipLevel !== "standard" && (
-                    <g>
-                      <rect
-                        x={villa.x + 0.5}
-                        y={villa.y - 3.2}
-                        width="2.8"
-                        height="1.1"
-                        rx="0.25"
-                        fill={s.vipLevel === "vvip" ? "#F59E0B" : "#8B5CF6"}
-                      />
-                      <text
-                        x={villa.x + 1.9}
-                        y={villa.y - 2.4}
-                        textAnchor="middle"
-                        fontSize="0.6"
-                        fill="#FFF"
-                        fontWeight="800"
-                      >
-                        {s.vipLevel.toUpperCase()}
-                      </text>
-                    </g>
-                  )}
-
-                  {/* ADA symbol */}
-                  {villa.ada && (
-                    <text
-                      x={villa.x}
-                      y={villa.y + 0.4}
-                      textAnchor="middle"
-                      fontSize="1.3"
-                    >
-                      ♿
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-
-            {/* North arrow */}
-            <g transform="translate(8, 8)">
-              <circle
-                r="2.5"
-                fill="#FFF"
-                stroke="#333"
-                strokeWidth="0.12"
-                opacity="0.9"
-              />
-              <path d="M 0,-1.8 L 0.4,0.3 L 0,0 L -0.4,0.3 Z" fill="#333" />
-              <text
-                y="-0.8"
-                textAnchor="middle"
-                fontSize="0.8"
-                fill="#333"
-                fontWeight="800"
-              >
-                N
-              </text>
-            </g>
-
-            {/* Scale */}
-            <g transform="translate(8, 76)">
-              <line
-                x1="0"
-                y1="0"
-                x2="8"
-                y2="0"
-                stroke="#333"
-                strokeWidth="0.15"
-              />
-              <line
-                x1="0"
-                y1="-0.25"
-                x2="0"
-                y2="0.25"
-                stroke="#333"
-                strokeWidth="0.15"
-              />
-              <line
-                x1="8"
-                y1="-0.25"
-                x2="8"
-                y2="0.25"
-                stroke="#333"
-                strokeWidth="0.15"
-              />
-              <text
-                x="4"
-                y="-0.4"
-                textAnchor="middle"
-                fontSize="0.7"
-                fill="#333"
-              >
-                ~50m
-              </text>
-            </g>
-          </svg>
-
-          {/* Villa Color Legend */}
+      {/* ═══════ MAIN LAYOUT ═══════ */}
+      <div style={{ display: "flex", height: "calc(100vh - 60px)" }}>
+        {/* ─── MAP ─── */}
+        <div
+          style={{
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+            background:
+              "linear-gradient(180deg, #B8E6D0 0%, #C8DEB8 30%, #D8D4A8 60%, #E8DAB0 100%)",
+          }}
+        >
+          {/* Water at top */}
           <div
             style={{
               position: "absolute",
-              bottom: 12,
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "12%",
+              background: "linear-gradient(180deg, #7EC8D8 0%, #A8DCC8 100%)",
+            }}
+          />
+
+          {/* Access path at bottom */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: "30%",
+              right: "10%",
+              height: "4%",
+              background: "#C8B898",
+              borderTop: "2px dashed #A89878",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: "40%",
+                top: "50%",
+                transform: "translateY(-50%)",
+                fontSize: 9,
+                color: "#8B7355",
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              VÍA DE ACCESO
+            </span>
+          </div>
+
+          {/* Compass */}
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 16,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.85)",
+              border: "2px solid #333",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 900,
+              color: "#333",
+            }}
+          >
+            N
+          </div>
+
+          {/* Facilities */}
+          {FACILITIES.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                position: "absolute",
+                left: `${f.x}%`,
+                top: `${f.y}%`,
+                width: `${f.w}%`,
+                height: `${f.h}%`,
+                background: f.color,
+                borderRadius: 6,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+              }}
+            >
+              <span
+                style={{
+                  color: "white",
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                }}
+              >
+                {f.name}
+              </span>
+              {f.label && (
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  {f.label}
+                </span>
+              )}
+            </div>
+          ))}
+
+          {/* Palm trees (decorative) */}
+          {[
+            [15, 15],
+            [85, 15],
+            [12, 50],
+            [90, 55],
+            [45, 70],
+            [70, 75],
+            [20, 80],
+            [55, 25],
+            [30, 35],
+          ].map(([x, y], i) => (
+            <div
+              key={`palm-${i}`}
+              style={{
+                position: "absolute",
+                left: `${x}%`,
+                top: `${y}%`,
+                fontSize: 16,
+                opacity: 0.5,
+                pointerEvents: "none",
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              🌴
+            </div>
+          ))}
+
+          {/* ─── VILLA NODES ─── */}
+          {VILLAS.map((villa) => {
+            const state = villaStates[villa.id];
+            if (!state) return null;
+            const statusCfg = STATUS_CONFIG[state.status];
+            const isSelected = selectedVilla === villa.id;
+            const isFiltered = filter !== "all" && state.status !== filter;
+            const nightsLeft = getNightsRemaining(state.guest);
+
+            return (
+              <div
+                key={villa.id}
+                className="villa-node"
+                onClick={() => setSelectedVilla(villa.id)}
+                style={{
+                  position: "absolute",
+                  left: `${villa.x}%`,
+                  top: `${villa.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  cursor: "pointer",
+                  opacity: isFiltered ? 0.2 : 1,
+                  pointerEvents: isFiltered ? "none" : "auto",
+                  zIndex: isSelected ? 10 : 1,
+                }}
+              >
+                {/* Villa building */}
+                <div
+                  style={{
+                    width: 56,
+                    height: 44,
+                    borderRadius: 8,
+                    background: "white",
+                    border: `3px solid ${isSelected ? "#0A0A0F" : statusCfg.color}`,
+                    boxShadow: isSelected
+                      ? `0 0 0 3px ${villa.color}60, 0 4px 16px rgba(0,0,0,0.25)`
+                      : "0 2px 8px rgba(0,0,0,0.15)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "visible",
+                  }}
+                >
+                  {/* Status dot */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -5,
+                      right: -5,
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      background: statusCfg.color,
+                      border: "2px solid white",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }}
+                    className={state.status === "maintenance" ? "pulse" : ""}
+                  />
+
+                  {/* VIP star */}
+                  {state.guest?.vip && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: -6,
+                        left: -6,
+                        fontSize: 14,
+                      }}
+                    >
+                      ⭐
+                    </div>
+                  )}
+
+                  {/* Guest count */}
+                  {state.guest && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: -6,
+                        right: -6,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "#0A0A0F",
+                        color: "white",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "2px solid white",
+                      }}
+                    >
+                      {state.guest.guests}
+                    </div>
+                  )}
+
+                  {/* Allergy flag */}
+                  {state.guest?.allergies &&
+                    state.guest.allergies.length > 0 && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: -6,
+                          left: 20,
+                          fontSize: 10,
+                        }}
+                      >
+                        ⚠️
+                      </div>
+                    )}
+
+                  {/* Nights remaining */}
+                  {nightsLeft !== null &&
+                    nightsLeft <= 1 &&
+                    state.status === "occupied" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: -8,
+                          left: -8,
+                          background: "#EF4444",
+                          color: "white",
+                          fontSize: 8,
+                          fontWeight: 800,
+                          padding: "1px 4px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {nightsLeft === 0 ? "OUT" : "1d"}
+                      </div>
+                    )}
+
+                  {/* Villa icon */}
+                  <div style={{ fontSize: 14 }}>
+                    {state.status === "cleaning"
+                      ? "🧹"
+                      : state.status === "maintenance"
+                        ? "🔧"
+                        : villa.accessible
+                          ? "♿"
+                          : "🏠"}
+                  </div>
+                </div>
+
+                {/* Villa name label — uses the ACTUAL color from the architectural blueprint */}
+                <div
+                  style={{
+                    marginTop: 4,
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    background: villa.color,
+                    color: "white",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    letterSpacing: 0.3,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  {villa.name}
+                </div>
+
+                {/* Guest name under villa */}
+                {state.guest && (
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontSize: 8,
+                      fontWeight: 600,
+                      color: "#333",
+                      textAlign: "center",
+                      maxWidth: 80,
+                      background: "rgba(255,255,255,0.85)",
+                      padding: "1px 4px",
+                      borderRadius: 3,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {state.guest.name}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Legend */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 40,
               left: 12,
-              background: "rgba(255,255,255,0.97)",
+              background: "rgba(255,255,255,0.95)",
               borderRadius: 10,
-              padding: "12px 16px",
-              border: "1px solid #E2E8F0",
-              backdropFilter: "blur(8px)",
-              fontSize: 10,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              padding: "10px 14px",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
             }}
           >
             <div
               style={{
+                fontSize: 10,
                 fontWeight: 800,
                 color: "#0A0A0F",
-                marginBottom: 10,
-                fontSize: 11,
-                borderBottom: "1px solid #E2E8F0",
-                paddingBottom: 6,
+                marginBottom: 6,
+                letterSpacing: 0.5,
               }}
             >
-              VILLAS POR COLOR
-            </div>
-            {[
-              {
-                color: VILLA_COLORS.yellow,
-                villas: "Teresa, Aduana",
-                label: "Amarillo",
-              },
-              { color: VILLA_COLORS.red, villas: "Trinidad", label: "Rojo" },
-              {
-                color: VILLA_COLORS.pink,
-                villas: "Paz, San Pedro, Coche",
-                label: "Rosa",
-              },
-              {
-                color: VILLA_COLORS.blue,
-                villas: "Pozo, Santo Domingo, Merced",
-                label: "Azul",
-              },
-              { color: VILLA_COLORS.gray, villas: "San Diego", label: "Gris" },
-            ].map((group) => (
-              <div
-                key={group.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 5,
-                }}
-              >
-                <div
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 3,
-                    background: group.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ color: "#333", fontWeight: 600, fontSize: 10 }}>
-                  {group.villas}
-                </span>
-              </div>
-            ))}
-
-            <div
-              style={{
-                fontWeight: 800,
-                color: "#0A0A0F",
-                marginTop: 12,
-                marginBottom: 8,
-                fontSize: 11,
-                borderTop: "1px solid #E2E8F0",
-                paddingTop: 10,
-              }}
-            >
-              ESTADO OCUPACIÓN
+              ESTADO VILLAS
             </div>
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
               <div
@@ -1452,293 +1239,824 @@ export default function TVCPropertyMap() {
                     height: 8,
                     borderRadius: "50%",
                     background: cfg.color,
-                    border: "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
-                <span style={{ color: "#333", fontWeight: 600 }}>
-                  {cfg.labelEs}
+                <span style={{ fontSize: 9, color: "#333", fontWeight: 600 }}>
+                  {cfg.label}
                 </span>
               </div>
             ))}
+            <div
+              style={{
+                borderTop: "1px solid #E2E8F0",
+                marginTop: 6,
+                paddingTop: 4,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  marginBottom: 2,
+                }}
+              >
+                <span style={{ fontSize: 9 }}>⭐</span>
+                <span style={{ fontSize: 9, color: "#333" }}>VIP Guest</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  marginBottom: 2,
+                }}
+              >
+                <span style={{ fontSize: 9 }}>⚠️</span>
+                <span style={{ fontSize: 9, color: "#333" }}>Alergias</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: "#0A0A0F",
+                    color: "white",
+                    fontSize: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                  }}
+                >
+                  3
+                </div>
+                <span style={{ fontSize: 9, color: "#333" }}>Huéspedes</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Detail Panel */}
-        {showPanel && sel && sel.villa && sel.status && (
-          <div
-            style={{
-              width: 340,
-              background: "#FFF",
-              borderLeft: "1px solid #E2E8F0",
-              overflowY: "auto",
-              animation: "slideIn 0.3s ease",
-            }}
-          >
-            <div
-              style={{
-                background: `linear-gradient(135deg, ${sel.villa.labelColor}20, ${sel.villa.labelColor}08)`,
-                padding: 20,
-                borderBottom: "1px solid #E2E8F0",
-              }}
-            >
+        {/* ═══════ DETAIL PANEL ═══════ */}
+        <div
+          style={{
+            width: 340,
+            background: "white",
+            borderLeft: "1px solid #E2E8F0",
+            overflowY: "auto",
+            flexShrink: 0,
+          }}
+        >
+          {sel && sel.state ? (
+            <div style={{ padding: 20 }}>
+              {/* Villa Header */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
+                  marginBottom: 16,
                 }}
               >
                 <div>
                   <div
-                    style={{ fontSize: 20, fontWeight: 900, color: "#0A0A0F" }}
+                    style={{ fontSize: 22, fontWeight: 900, color: "#0A0A0F" }}
                   >
-                    {sel.villa.name}
+                    Villa {sel.name}
                   </div>
-                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-                    {sel.villa.type} • Max {sel.villa.maxGuests} huéspedes
+                  <div style={{ fontSize: 12, color: "#64748B" }}>
+                    {sel.type} • Max {sel.maxGuests} huéspedes
                   </div>
+                  {sel.accessible && (
+                    <Badge color="#1565C0" small>
+                      ♿ Accesible
+                    </Badge>
+                  )}
                 </div>
                 <button
-                  onClick={() => setShowPanel(false)}
+                  onClick={() => setSelectedVilla(null)}
                   style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: 18,
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: "1px solid #E2E8F0",
+                    background: "#F8FAFC",
                     cursor: "pointer",
+                    fontSize: 14,
                     color: "#64748B",
-                    padding: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "inherit",
                   }}
                 >
-                  ✕
+                  ×
                 </button>
               </div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginTop: 10,
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  background: STATUS_CONFIG[sel.status.status].bg,
-                  border: `1px solid ${STATUS_CONFIG[sel.status.status].border}`,
-                }}
-              >
-                <span style={{ fontSize: 10 }}>
-                  {STATUS_CONFIG[sel.status.status].icon}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: STATUS_CONFIG[sel.status.status].color,
-                  }}
-                >
-                  {STATUS_CONFIG[sel.status.status].labelEs}
-                </span>
-              </div>
-            </div>
 
-            {sel.status.guests && (
-              <div
+              {/* Status Badge — Clickable to change */}
+              <button
+                onClick={() => setShowStatusModal(true)}
                 style={{
-                  padding: "16px 20px",
-                  borderBottom: "1px solid #F1F5F9",
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: STATUS_CONFIG[sel.state.status].bg,
+                  border: `1px solid ${STATUS_CONFIG[sel.state.status].color}30`,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  marginBottom: 12,
+                  fontFamily: "inherit",
                 }}
               >
                 <div
                   style={{
-                    fontSize: 11,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span style={{ fontSize: 12 }}>
+                      {STATUS_CONFIG[sel.state.status].icon}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: STATUS_CONFIG[sel.state.status].color,
+                      }}
+                    >
+                      {STATUS_CONFIG[sel.state.status].label}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 10, color: "#999" }}>Cambiar ▸</span>
+                </div>
+              </button>
+
+              {/* Cleaning State */}
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
                     fontWeight: 700,
+                    color: "#64748B",
+                    letterSpacing: 0.5,
+                    marginBottom: 4,
+                  }}
+                >
+                  ESTADO LIMPIEZA
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background:
+                        CLEANING_STATES[sel.state.cleaningState].color,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: CLEANING_STATES[sel.state.cleaningState].color,
+                    }}
+                  >
+                    {CLEANING_STATES[sel.state.cleaningState].label}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 4,
+                    marginTop: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {(
+                    Object.entries(CLEANING_STATES) as [
+                      VillaState["cleaningState"],
+                      { label: string; color: string },
+                    ][]
+                  ).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      onClick={() =>
+                        updateVilla(selectedVilla!, { cleaningState: key })
+                      }
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        fontFamily: "inherit",
+                        background:
+                          sel.state.cleaningState === key
+                            ? cfg.color
+                            : `${cfg.color}15`,
+                        color:
+                          sel.state.cleaningState === key ? "white" : cfg.color,
+                      }}
+                    >
+                      {cfg.label.split(" — ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Maintenance */}
+              {sel.state.status === "maintenance" && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    marginBottom: 12,
+                    background: "#F5F3FF",
+                    border: "1px solid #8B5CF630",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#8B5CF6",
+                      letterSpacing: 0.5,
+                      marginBottom: 4,
+                    }}
+                  >
+                    MANTENIMIENTO {sel.state.maintenanceUrgent && "🚨 URGENTE"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#333" }}>
+                    {sel.state.maintenanceNotes || "Sin notas"}
+                  </div>
+                </div>
+              )}
+
+              {/* Guest Info */}
+              {sel.state.guest ? (
+                <div
+                  style={{
+                    padding: "14px",
+                    borderRadius: 12,
+                    marginBottom: 12,
+                    background: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#64748B",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      HUÉSPED
+                    </div>
+                    {sel.state.guest.vip && (
+                      <Badge color="#DAA520" small>
+                        ⭐ VIP
+                      </Badge>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: "#0A0A0F",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {sel.state.guest.name}
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{ fontSize: 9, color: "#999", fontWeight: 600 }}
+                      >
+                        👥 Huéspedes
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: "#0A0A0F",
+                        }}
+                      >
+                        {sel.state.guest.guests}
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        style={{ fontSize: 9, color: "#999", fontWeight: 600 }}
+                      >
+                        🌙 Noches
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: "#0A0A0F",
+                        }}
+                      >
+                        {sel.state.guest.nights}
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        style={{ fontSize: 9, color: "#999", fontWeight: 600 }}
+                      >
+                        📅 Check-in
+                      </div>
+                      <div
+                        style={{ fontSize: 11, fontWeight: 600, color: "#333" }}
+                      >
+                        {sel.state.guest.checkIn}
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        style={{ fontSize: 9, color: "#999", fontWeight: 600 }}
+                      >
+                        📅 Check-out
+                      </div>
+                      <div
+                        style={{ fontSize: 11, fontWeight: 600, color: "#333" }}
+                      >
+                        {sel.state.guest.checkOut}
+                      </div>
+                    </div>
+                  </div>
+                  {sel.state.guest.phone && (
+                    <div
+                      style={{ fontSize: 11, color: "#333", marginBottom: 4 }}
+                    >
+                      📱 {sel.state.guest.phone}
+                    </div>
+                  )}
+                  {sel.state.guest.allergies?.length > 0 && (
+                    <div style={{ marginBottom: 4 }}>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          color: "#EF4444",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ⚠️ ALERGIAS:{" "}
+                      </span>
+                      {sel.state.guest.allergies.map((a) => (
+                        <Badge key={a} color="#EF4444" small>
+                          {a}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {sel.state.guest.notes && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#666",
+                        fontStyle: "italic",
+                        padding: "6px 8px",
+                        background: "#FFFBEB",
+                        borderRadius: 6,
+                        marginTop: 4,
+                      }}
+                    >
+                      📝 {sel.state.guest.notes}
+                    </div>
+                  )}
+                  {/* Nights remaining */}
+                  {getNightsRemaining(sel.state.guest) !== null && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        textAlign: "center",
+                        background:
+                          getNightsRemaining(sel.state.guest)! <= 1
+                            ? "#FEF2F2"
+                            : "#EBF5FF",
+                        border: `1px solid ${getNightsRemaining(sel.state.guest)! <= 1 ? "#EF444430" : "#3B82F630"}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color:
+                            getNightsRemaining(sel.state.guest)! <= 1
+                              ? "#EF4444"
+                              : "#3B82F6",
+                        }}
+                      >
+                        {getNightsRemaining(sel.state.guest) === 0
+                          ? "🔴 CHECKOUT TODAY"
+                          : `${getNightsRemaining(sel.state.guest)} noches restantes`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: "20px 14px",
+                    borderRadius: 12,
+                    marginBottom: 12,
+                    background: "#F8FAFC",
+                    border: "1px dashed #CBD5E1",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 4 }}>🏠</div>
+                  <div style={{ fontSize: 12, color: "#64748B" }}>
+                    Sin huésped asignado
+                  </div>
+                </div>
+              )}
+
+              {/* Villa Specs */}
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#64748B",
+                    letterSpacing: 0.5,
+                    marginBottom: 6,
+                  }}
+                >
+                  ESPECIFICACIONES
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 6,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 9, color: "#999" }}>🛏️ Camas</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      {sel.beds}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#999" }}>
+                      🛋️ Sofá Cama
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      {sel.sofa ? "Sí" : "No"}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#999" }}>
+                      👥 Capacidad
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      {sel.maxGuests} huéspedes
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#999" }}>📍 Zona</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      {sel.zone}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════ QUICK ACTIONS ═══════ */}
+              <div style={{ marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: "#0066CC",
+                    letterSpacing: 0.5,
+                    marginBottom: 8,
+                  }}
+                >
+                  ACCIONES RÁPIDAS
+                </div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {!sel.state.guest && sel.state.status !== "maintenance" && (
+                    <ActionBtn
+                      color="#10B981"
+                      onClick={() => {
+                        setEditForm({
+                          name: "",
+                          guests: 1,
+                          checkIn: new Date().toISOString().split("T")[0],
+                          checkOut: "",
+                          phone: "",
+                          allergies: "",
+                          vip: false,
+                          notes: "",
+                        });
+                        setShowAssignModal(true);
+                      }}
+                    >
+                      👤 Asignar Huésped
+                    </ActionBtn>
+                  )}
+                  {sel.state.guest && (
+                    <ActionBtn
+                      color="#3B82F6"
+                      onClick={() => setShowMoveModal(true)}
+                    >
+                      🔄 Mover Huésped a Otra Villa
+                    </ActionBtn>
+                  )}
+                  <ActionBtn
+                    color="#F59E0B"
+                    onClick={() => {
+                      updateVilla(selectedVilla!, {
+                        status: "cleaning",
+                        cleaningState: "pending",
+                      });
+                    }}
+                    disabled={sel.state.status === "cleaning"}
+                  >
+                    ✅ Iniciar Checklist Limpieza
+                  </ActionBtn>
+                  <ActionBtn
+                    color="#8B5CF6"
+                    onClick={() => setShowMaintenanceModal(true)}
+                  >
+                    🔧 Reportar Mantenimiento
+                  </ActionBtn>
+                  {sel.state.guest && (
+                    <>
+                      <ActionBtn color="#0066CC" onClick={() => {}}>
+                        📋 Ver Detalles Huésped
+                      </ActionBtn>
+                      <ActionBtn
+                        color="#10B981"
+                        onClick={() => {
+                          window.open(
+                            `https://wa.me/${sel.state.guest?.phone?.replace(/[^0-9+]/g, "")}`,
+                            "_blank",
+                          );
+                        }}
+                        disabled={!sel.state.guest.phone}
+                      >
+                        💬 Contactar Huésped (WhatsApp)
+                      </ActionBtn>
+                    </>
+                  )}
+                  {sel.state.status === "checkout" && (
+                    <ActionBtn
+                      color="#EF4444"
+                      onClick={() =>
+                        handleStatusChange(selectedVilla!, "cleaning")
+                      }
+                    >
+                      🚪 Procesar Check-out → Limpieza
+                    </ActionBtn>
+                  )}
+                  {sel.state.status === "arriving" && (
+                    <ActionBtn
+                      color="#10B981"
+                      onClick={() =>
+                        handleStatusChange(selectedVilla!, "occupied")
+                      }
+                    >
+                      ✨ Confirmar Check-in → Ocupada
+                    </ActionBtn>
+                  )}
+                  {sel.state.cleaningState === "approved" &&
+                    sel.state.status === "cleaning" && (
+                      <ActionBtn
+                        color="#10B981"
+                        onClick={() =>
+                          handleStatusChange(selectedVilla!, "vacant")
+                        }
+                      >
+                        🏠 Marcar como Disponible
+                      </ActionBtn>
+                    )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: 20, textAlign: "center", marginTop: 40 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🏝️</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#0A0A0F" }}>
+                Selecciona una Villa
+              </div>
+              <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+                Haz click en una villa en el mapa para ver detalles, cambiar
+                estado, o asignar huéspedes.
+              </div>
+              <div style={{ marginTop: 24, textAlign: "left" }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
                     color: "#64748B",
                     letterSpacing: 0.5,
                     marginBottom: 8,
                   }}
                 >
-                  INFORMACIÓN HUÉSPED
+                  RESUMEN DE HOY
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div
-                    style={{ fontSize: 15, fontWeight: 800, color: "#0A0A0F" }}
-                  >
-                    {sel.status.guests}
-                  </div>
-                  {sel.status.vipLevel &&
-                    sel.status.vipLevel !== "standard" && (
+                {filteredVillas.map((v) => {
+                  const s = villaStates[v.id];
+                  if (!s) return null;
+                  const cfg = STATUS_CONFIG[s.status];
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => setSelectedVilla(v.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        marginBottom: 3,
+                        cursor: "pointer",
+                        background: "#F8FAFC",
+                        border: "1px solid #E2E8F0",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 20,
+                          height: 14,
+                          borderRadius: 3,
+                          background: v.color,
+                        }}
+                      />
                       <span
                         style={{
-                          padding: "2px 6px",
-                          borderRadius: 4,
-                          fontSize: 9,
-                          fontWeight: 800,
-                          background:
-                            sel.status.vipLevel === "vvip"
-                              ? "#F59E0B"
-                              : "#8B5CF6",
-                          color: "#FFF",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#0A0A0F",
+                          flex: 1,
                         }}
                       >
-                        {sel.status.vipLevel.toUpperCase()}
+                        {v.name}
                       </span>
-                    )}
-                </div>
-                <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-                  <div>
-                    <div
-                      style={{ fontSize: 9, color: "#94A3B8", fontWeight: 600 }}
-                    >
-                      HUÉSPEDES
+                      <Badge color={cfg.color} small>
+                        {cfg.label}
+                      </Badge>
+                      {s.guest && (
+                        <span style={{ fontSize: 9, color: "#64748B" }}>
+                          {s.guest.guests}👥
+                        </span>
+                      )}
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════ MODALS ═══════ */}
+
+      {/* Status Change Modal */}
+      {showStatusModal && selectedVilla && sel && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowStatusModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>
+              Cambiar Estado — Villa {sel.name}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(
+                Object.entries(STATUS_CONFIG) as [
+                  VillaState["status"],
+                  typeof STATUS_CONFIG.occupied,
+                ][]
+              ).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => handleStatusChange(selectedVilla, key)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    border: `2px solid ${cfg.color}30`,
+                    background: sel.state.status === key ? cfg.bg : "white",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.15s",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{cfg.icon}</span>
+                  <div style={{ textAlign: "left" }}>
                     <div
                       style={{
-                        fontSize: 16,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: cfg.color,
+                      }}
+                    >
+                      {cfg.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#999" }}>
+                      {cfg.labelEn}
+                    </div>
+                  </div>
+                  {sel.state.status === key && (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        color: cfg.color,
                         fontWeight: 800,
-                        color: "#0A0A0F",
                       }}
                     >
-                      {sel.status.guestCount}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{ fontSize: 9, color: "#94A3B8", fontWeight: 600 }}
-                    >
-                      CHECK-IN
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#0A0A0F",
-                      }}
-                    >
-                      {sel.status.checkIn}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{ fontSize: 9, color: "#94A3B8", fontWeight: 600 }}
-                    >
-                      CHECK-OUT
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#0A0A0F",
-                      }}
-                    >
-                      {sel.status.checkOut}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-            <div
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid #F1F5F9",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#64748B",
-                  letterSpacing: 0.5,
-                  marginBottom: 8,
-                }}
-              >
-                ESTADO LIMPIEZA
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  background: `${CLEANING_STATUS[sel.status.cleaning].color}10`,
-                  border: `1px solid ${CLEANING_STATUS[sel.status.cleaning].color}30`,
-                }}
-              >
-                <div
+      {/* Assign Guest Modal */}
+      {showAssignModal && selectedVilla && sel && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAssignModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>
+              Asignar Huésped — Villa {sel.name}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label
                   style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: CLEANING_STATUS[sel.status.cleaning].color,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: 700,
-                    color: CLEANING_STATUS[sel.status.cleaning].color,
+                    color: "#333",
+                    display: "block",
+                    marginBottom: 4,
                   }}
                 >
-                  {CLEANING_STATUS[sel.status.cleaning].labelEs}
-                </span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid #F1F5F9",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#64748B",
-                  letterSpacing: 0.5,
-                  marginBottom: 8,
-                }}
-              >
-                MANTENIMIENTO
-              </div>
-              {sel.status.maintenance === "ok" ? (
-                <div
-                  style={{ fontSize: 13, color: "#10B981", fontWeight: 700 }}
-                >
-                  ✅ Todos los sistemas operativos
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#FFF7ED",
-                    border: "1px solid #F59E0B30",
-                    fontSize: 12,
-                    color: "#92400E",
-                    fontWeight: 600,
-                  }}
-                >
-                  ⚠️ Revisión de AC necesaria
-                </div>
-              )}
-            </div>
-
-            <div
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid #F1F5F9",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#64748B",
-                  letterSpacing: 0.5,
-                  marginBottom: 8,
-                }}
-              >
-                ESPECIFICACIONES
+                  Nombre del Huésped *
+                </label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, name: e.target.value }))
+                  }
+                  placeholder="Ej: Martinez Family"
+                />
               </div>
               <div
                 style={{
@@ -1747,101 +2065,328 @@ export default function TVCPropertyMap() {
                   gap: 8,
                 }}
               >
-                {[
-                  ["🛏️ Camas", `${sel.villa.beds} dobles`],
-                  ["🛋️ Sofá Cama", sel.villa.sofa ? "Sí" : "No"],
-                  ["👥 Capacidad", `${sel.villa.maxGuests} huéspedes`],
-                  ["📍 Zona", sel.villa.zone.toUpperCase()],
-                ].map(([label, val]) => (
-                  <div key={String(label)}>
-                    <div style={{ fontSize: 9, color: "#94A3B8" }}>{label}</div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "#0A0A0F",
-                      }}
-                    >
-                      {val}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {sel.villa.ada && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    background: "#EBF5FF",
-                    border: "1px solid #0066CC30",
-                    fontSize: 11,
-                    color: "#0066CC",
-                    fontWeight: 700,
-                  }}
-                >
-                  ♿ Accesibilidad Reducida — Acceso para silla de ruedas
+                <div>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#333",
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Huéspedes
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={sel.maxGuests}
+                    value={editForm.guests}
+                    onChange={(e) =>
+                      setEditForm((p) => ({
+                        ...p,
+                        guests: parseInt(e.target.value) || 1,
+                      }))
+                    }
+                  />
                 </div>
-              )}
-            </div>
-
-            <div style={{ padding: "16px 20px" }}>
+                <div>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#333",
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Teléfono
+                  </label>
+                  <input
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, phone: e.target.value }))
+                    }
+                    placeholder="+1 555..."
+                  />
+                </div>
+              </div>
               <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#64748B",
-                  letterSpacing: 0.5,
-                  marginBottom: 10,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
                 }}
               >
-                ACCIONES RÁPIDAS
+                <div>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#333",
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Check-in
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.checkIn}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, checkIn: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#333",
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Check-out
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.checkOut}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, checkOut: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
-              {[
-                {
-                  label: "🧹 Iniciar Checklist Limpieza",
-                  color: "#F59E0B",
-                  href: "/ops/housekeeping",
-                },
-                {
-                  label: "🔧 Reportar Mantenimiento",
-                  color: "#8B5CF6",
-                  href: "/ops/maintenance",
-                },
-                {
-                  label: "📋 Ver Detalles Huésped",
-                  color: "#0066CC",
-                  href: "/ops/villa-map",
-                },
-                { label: "💬 Contactar Huésped", color: "#10B981", href: "#" },
-              ].map((btn) => (
-                <a
-                  key={btn.label}
-                  href={btn.href}
+              <div>
+                <label
                   style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    border: `1px solid ${btn.color}30`,
-                    background: `${btn.color}08`,
-                    color: btn.color,
+                    fontSize: 11,
                     fontWeight: 700,
-                    fontSize: 12,
-                    cursor: "pointer",
-                    marginBottom: 6,
-                    textAlign: "left",
-                    fontFamily: "DM Sans",
-                    textDecoration: "none",
+                    color: "#333",
+                    display: "block",
+                    marginBottom: 4,
                   }}
                 >
-                  {btn.label}
-                </a>
-              ))}
+                  Alergias (separadas por coma)
+                </label>
+                <input
+                  value={editForm.allergies}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, allergies: e.target.value }))
+                  }
+                  placeholder="gluten, dairy, shellfish..."
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#333",
+                    display: "block",
+                    marginBottom: 4,
+                  }}
+                >
+                  Notas
+                </label>
+                <textarea
+                  rows={2}
+                  value={editForm.notes}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, notes: e.target.value }))
+                  }
+                  placeholder="Late checkout, champagne on arrival..."
+                />
+              </div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editForm.vip}
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, vip: e.target.checked }))
+                  }
+                  style={{ width: 16, height: 16 }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 700 }}>
+                  ⭐ VIP Guest
+                </span>
+              </label>
+              <button
+                onClick={handleAssignGuest}
+                disabled={!editForm.name.trim()}
+                style={{
+                  padding: "12px",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: "pointer",
+                  background: editForm.name.trim() ? "#10B981" : "#E2E8F0",
+                  color: "white",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  marginTop: 4,
+                  fontFamily: "inherit",
+                }}
+              >
+                Asignar Huésped
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Move Guest Modal */}
+      {showMoveModal && selectedVilla && sel?.state?.guest && (
+        <div className="modal-overlay" onClick={() => setShowMoveModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
+              Mover Huésped
+            </div>
+            <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
+              {sel.state.guest.name} — Villa {sel.name} →
+            </div>
+            {vacantVillas.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {vacantVillas.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => handleMoveGuest(selectedVilla, v.id)}
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: 10,
+                      border: "1px solid #E2E8F0",
+                      background: "white",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 24,
+                        height: 16,
+                        borderRadius: 4,
+                        background: v.color,
+                      }}
+                    />
+                    <div style={{ textAlign: "left", flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>
+                        Villa {v.name}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#999" }}>
+                        {v.type} • Max {v.maxGuests} • {v.zone}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "#0066CC",
+                        fontWeight: 700,
+                      }}
+                    >
+                      → Mover
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
+                No hay villas disponibles
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Report Modal */}
+      {showMaintenanceModal && selectedVilla && sel && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowMaintenanceModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>
+              🔧 Reportar Mantenimiento — Villa {sel.name}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#333",
+                    display: "block",
+                    marginBottom: 4,
+                  }}
+                >
+                  Descripción del problema
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Ej: AC unit not cooling, strange noise..."
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, notes: e.target.value }))
+                  }
+                />
+              </div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  onChange={(e) =>
+                    setEditForm((p) => ({ ...p, vip: e.target.checked }))
+                  }
+                  style={{ width: 16, height: 16 }}
+                />
+                <span
+                  style={{ fontSize: 12, fontWeight: 700, color: "#EF4444" }}
+                >
+                  🚨 Urgente (affects guest safety or comfort)
+                </span>
+              </label>
+              <button
+                onClick={() => {
+                  updateVilla(selectedVilla, {
+                    status: "maintenance",
+                    maintenanceNotes: editForm.notes,
+                    maintenanceUrgent: editForm.vip,
+                  });
+                  setShowMaintenanceModal(false);
+                }}
+                style={{
+                  padding: "12px",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: "pointer",
+                  background: "#8B5CF6",
+                  color: "white",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                }}
+              >
+                Reportar Mantenimiento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
