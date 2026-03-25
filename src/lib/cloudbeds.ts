@@ -320,10 +320,25 @@ export async function syncReservations(batchSize = 20): Promise<SyncResult> {
     );
 
     const allReservations = data.data || [];
-    // Process only a batch to avoid timeout - prioritize most recent
-    const reservations = allReservations.slice(0, batchSize);
+
+    // Get already synced reservation IDs from last hour to skip them
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recentlySynced } = await supabase
+      .from("villa_bookings")
+      .select("cloudbeds_reservation_id")
+      .gt("cloudbeds_synced_at", oneHourAgo);
+
+    const syncedIds = new Set(
+      (recentlySynced || []).map((r) => r.cloudbeds_reservation_id),
+    );
+
+    // Filter out recently synced and take batch
+    const unsynced = allReservations.filter(
+      (r) => !syncedIds.has(r.reservationID),
+    );
+    const reservations = unsynced.slice(0, batchSize);
     console.log(
-      `[Cloudbeds] Found ${allReservations.length} reservations, processing ${reservations.length}`,
+      `[Cloudbeds] Found ${allReservations.length} total, ${unsynced.length} need sync, processing ${reservations.length}`,
     );
 
     for (let i = 0; i < reservations.length; i++) {
