@@ -9,6 +9,18 @@ const NAV_ITEMS = [
   { key: "overview", labelKey: "nav.overview", href: "/ops", icon: "📊" },
   { key: "demo", labelKey: "nav.demo", href: "/ops/demo", icon: "🎓" },
   {
+    key: "bookings",
+    labelKey: "nav.bookings",
+    href: "/ops/bookings",
+    icon: "📋",
+  },
+  {
+    key: "deposits",
+    labelKey: "nav.deposits",
+    href: "/ops/deposits",
+    icon: "💳",
+  },
+  {
     key: "welcome-guide",
     labelKey: "nav.welcome_guide",
     href: "/ops/welcome-guide",
@@ -18,7 +30,7 @@ const NAV_ITEMS = [
     key: "requirements",
     labelKey: "nav.requirements",
     href: "/ops/requirements",
-    icon: "📋",
+    icon: "📝",
   },
   { key: "fb-pl", labelKey: "nav.fb_pl", href: "/ops/fb-pl", icon: "💰" },
   { key: "revenue", labelKey: "nav.revenue", href: "/ops/revenue", icon: "🚀" },
@@ -27,6 +39,18 @@ const NAV_ITEMS = [
     labelKey: "nav.occupancy",
     href: "/ops/occupancy",
     icon: "📅",
+  },
+  {
+    key: "groups",
+    labelKey: "nav.groups",
+    href: "/ops/groups",
+    icon: "👥",
+  },
+  {
+    key: "schedule",
+    labelKey: "nav.schedule",
+    href: "/ops/schedule",
+    icon: "📆",
   },
   {
     key: "staff-bot",
@@ -47,16 +71,52 @@ const NAV_ITEMS = [
     icon: "🧹",
   },
   {
+    key: "cleaning-priority",
+    labelKey: "nav.cleaning_priority",
+    href: "/ops/cleaning-priority",
+    icon: "⏱️",
+  },
+  {
     key: "maintenance",
     labelKey: "nav.maintenance",
     href: "/ops/maintenance",
     icon: "🔧",
   },
   {
+    key: "maintenance-schedule",
+    labelKey: "nav.maintenance_schedule",
+    href: "/ops/maintenance/schedule",
+    icon: "📆",
+  },
+  {
+    key: "preventive",
+    labelKey: "nav.preventive",
+    href: "/ops/preventive-maintenance",
+    icon: "🛡️",
+  },
+  {
+    key: "suppliers",
+    labelKey: "nav.suppliers",
+    href: "/ops/suppliers",
+    icon: "📦",
+  },
+  {
+    key: "vendors",
+    labelKey: "nav.vendors",
+    href: "/ops/vendors",
+    icon: "🛠️",
+  },
+  {
     key: "property-map",
     labelKey: "nav.property_map",
     href: "/ops/property-map",
     icon: "🗺️",
+  },
+  {
+    key: "reports",
+    labelKey: "nav.reports",
+    href: "/ops/reports",
+    icon: "📈",
   },
 ];
 

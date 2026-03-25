@@ -22,19 +22,342 @@ const LanguageContext = createContext<LanguageContextType | undefined>(
 
 // All translations for the platform
 const translations: Record<string, Record<Language, string>> = {
+  // ─── Staff Portal Navigation ───
+  "staff.portal": { es: "Portal del Personal", en: "Staff Portal" },
+  "staff.tasks": { es: "Tareas", en: "Tasks" },
+  "staff.pos": { es: "POS", en: "POS" },
+  "staff.checks": { es: "Checks", en: "Checks" },
+  "staff.linens": { es: "Blancos", en: "Linens" },
+  "staff.training": { es: "Capacitar", en: "Training" },
+  "staff.logout": { es: "Salir", en: "Logout" },
+  "staff.waste": { es: "Merma", en: "Waste" },
+  "staff.closing": { es: "Cierre", en: "Closing" },
+  "staff.offline_banner": {
+    es: "Sin conexion — Los cambios se guardaran automaticamente",
+    en: "Offline — Changes will be saved automatically",
+  },
+
+  // ─── Tasks Page ───
+  "tasks.today": { es: "Hoy", en: "Today" },
+  "tasks.guests": { es: "Huespedes", en: "Guests" },
+  "tasks.check_ins": { es: "Llegadas", en: "Check-ins" },
+  "tasks.check_outs": { es: "Salidas", en: "Check-outs" },
+  "tasks.checklists_today": {
+    es: "Checklists de Hoy",
+    en: "Today's Checklists",
+  },
+  "tasks.no_checklists": {
+    es: "No hay checklists asignados hoy",
+    en: "No checklists assigned today",
+  },
+  "tasks.quick_actions": { es: "Acciones Rapidas", en: "Quick Actions" },
+  "tasks.ask_bot": { es: "Preguntar al Bot", en: "Ask the Bot" },
+  "tasks.recipes_sops": {
+    es: "Recetas, SOPs, etc.",
+    en: "Recipes, SOPs, etc.",
+  },
+  "tasks.inventory": { es: "Inventario", en: "Inventory" },
+  "tasks.count_stock": { es: "Contar stock", en: "Count stock" },
+
+  // ─── Checklist Page ───
+  "checklist.title": { es: "Checklists", en: "Checklists" },
+  "checklist.select_type": {
+    es: "Selecciona el tipo de checklist para comenzar",
+    en: "Select the checklist type to start",
+  },
+  "checklist.estimated_time": { es: "min", en: "min" },
+
+  // ─── Inventory Page ───
+  "inventory.title": { es: "Inventario", en: "Inventory" },
+  "inventory.daily_count": {
+    es: "Conteo diario de stock",
+    en: "Daily stock count",
+  },
+  "inventory.save": { es: "Guardar", en: "Save" },
+  "inventory.saving": { es: "Guardando...", en: "Saving..." },
+  "inventory.saved_success": {
+    es: "Inventario guardado exitosamente",
+    en: "Inventory saved successfully",
+  },
+  "inventory.ingredients": { es: "ingredientes", en: "ingredients" },
+  "inventory.low_stock": { es: "bajo stock", en: "low stock" },
+  "inventory.min": { es: "Min", en: "Min" },
+  "inventory.all": { es: "Todos", en: "All" },
+  "inventory.proteins": { es: "Proteinas", en: "Proteins" },
+  "inventory.vegetables": { es: "Vegetales", en: "Vegetables" },
+  "inventory.dairy": { es: "Lacteos", en: "Dairy" },
+  "inventory.dry_goods": { es: "Secos", en: "Dry Goods" },
+  "inventory.beverages": { es: "Bebidas", en: "Beverages" },
+  "inventory.alcohol": { es: "Alcohol", en: "Alcohol" },
+  "inventory.cleaning": { es: "Limpieza", en: "Cleaning" },
+
+  // ─── Bot Page ───
+  "bot.greeting": {
+    es: "Hola! Soy el asistente de TVC. Puedo ayudarte con:",
+    en: "Hello! I'm the TVC assistant. I can help you with:",
+  },
+  "bot.help_recipes": {
+    es: "Recetas y preparacion de platos",
+    en: "Recipes and dish preparation",
+  },
+  "bot.help_drinks": {
+    es: "Como hacer bebidas y cocteles",
+    en: "How to make drinks and cocktails",
+  },
+  "bot.help_cleaning": {
+    es: "Procedimientos de limpieza",
+    en: "Cleaning procedures",
+  },
+  "bot.help_emergency": {
+    es: "Protocolos de emergencia",
+    en: "Emergency protocols",
+  },
+  "bot.help_boat": { es: "Horarios de lancha", en: "Boat schedules" },
+  "bot.help_other": {
+    es: "Cualquier otra duda operativa",
+    en: "Any other operational questions",
+  },
+  "bot.placeholder": {
+    es: "Escribe tu pregunta...",
+    en: "Type your question...",
+  },
+  "bot.error": {
+    es: "Lo siento, hubo un error. Por favor intenta de nuevo.",
+    en: "Sorry, there was an error. Please try again.",
+  },
+  "bot.connection_error": {
+    es: "Error de conexion. Verifica tu internet e intenta de nuevo.",
+    en: "Connection error. Check your internet and try again.",
+  },
+  "bot.quick_mojito": {
+    es: "Como hago un mojito?",
+    en: "How do I make a mojito?",
+  },
+  "bot.quick_ceviche": { es: "Receta del ceviche", en: "Ceviche recipe" },
+  "bot.quick_boat": { es: "Horario de lancha", en: "Boat schedule" },
+  "bot.quick_emergency": { es: "Emergencia medica", en: "Medical emergency" },
+
+  // ─── Status Labels ───
+  "status.pending": { es: "Pendiente", en: "Pending" },
+  "status.in_progress": { es: "En progreso", en: "In Progress" },
+  "status.complete": { es: "Completado", en: "Complete" },
+  "status.approved": { es: "Aprobado", en: "Approved" },
+  "status.rejected": { es: "Rechazado", en: "Rejected" },
+
+  // ─── Departments ───
+  "dept.housekeeping": { es: "Limpieza", en: "Housekeeping" },
+  "dept.maintenance": { es: "Mantenimiento", en: "Maintenance" },
+  "dept.kitchen": { es: "Cocina", en: "Kitchen" },
+  "dept.pool": { es: "Piscina", en: "Pool" },
+
+  // ─── Errors ───
+  "error.login_required": {
+    es: "Por favor inicia sesion",
+    en: "Please log in",
+  },
+  "error.user_not_found": { es: "Usuario no encontrado", en: "User not found" },
+  "error.save_failed": {
+    es: "Error al guardar. Intenta de nuevo.",
+    en: "Save failed. Try again.",
+  },
+
+  // ─── Property Map ───
+  "map.guests": { es: "Huespedes", en: "Guests" },
+  "map.occupied": { es: "Ocupadas", en: "Occupied" },
+  "map.arrivals": { es: "Llegadas", en: "Arrivals" },
+  "map.capacity": { es: "Capacidad", en: "Capacity" },
+  "map.villa_status": { es: "Estado Villas", en: "Villa Status" },
+  "map.vip_guest": { es: "Huesped VIP", en: "VIP Guest" },
+  "map.allergies": { es: "Alergias", en: "Allergies" },
+  "map.select_villa": { es: "Selecciona una Villa", en: "Select a Villa" },
+  "map.select_villa_desc": {
+    es: "Haz click en una villa en el mapa para ver detalles, cambiar estado, o asignar huespedes.",
+    en: "Click on a villa on the map to view details, change status, or assign guests.",
+  },
+  "map.today_summary": { es: "Resumen de Hoy", en: "Today's Summary" },
+  "map.quick_actions": { es: "Acciones Rapidas", en: "Quick Actions" },
+  "map.assign_guest": { es: "Asignar Huesped", en: "Assign Guest" },
+  "map.move_guest": {
+    es: "Mover Huesped a Otra Villa",
+    en: "Move Guest to Another Villa",
+  },
+  "map.start_cleaning": {
+    es: "Iniciar Checklist Limpieza",
+    en: "Start Cleaning Checklist",
+  },
+  "map.report_maintenance": {
+    es: "Reportar Mantenimiento",
+    en: "Report Maintenance",
+  },
+  "map.view_guest_details": {
+    es: "Ver Detalles Huesped",
+    en: "View Guest Details",
+  },
+  "map.contact_guest": {
+    es: "Contactar Huesped (WhatsApp)",
+    en: "Contact Guest (WhatsApp)",
+  },
+  "map.process_checkout": {
+    es: "Procesar Check-out → Limpieza",
+    en: "Process Check-out → Cleaning",
+  },
+  "map.confirm_checkin": {
+    es: "Confirmar Check-in → Ocupada",
+    en: "Confirm Check-in → Occupied",
+  },
+  "map.mark_available": {
+    es: "Marcar como Disponible",
+    en: "Mark as Available",
+  },
+  "map.change": { es: "Cambiar", en: "Change" },
+  "map.cleaning_status": { es: "Estado Limpieza", en: "Cleaning Status" },
+  "map.specs": { es: "Especificaciones", en: "Specifications" },
+  "map.beds": { es: "Camas", en: "Beds" },
+  "map.sofa_bed": { es: "Sofa Cama", en: "Sofa Bed" },
+  "map.capacity_label": { es: "Capacidad", en: "Capacity" },
+  "map.zone": { es: "Zona", en: "Zone" },
+  "map.no_guest": { es: "Sin huesped asignado", en: "No guest assigned" },
+  "map.nights_remaining": { es: "noches restantes", en: "nights remaining" },
+  "map.checkout_today": { es: "CHECKOUT HOY", en: "CHECKOUT TODAY" },
+  "map.loading": { es: "Cargando mapa...", en: "Loading map..." },
+  "map.access_road": { es: "Via de Acceso", en: "Access Road" },
+
+  // ─── Villa Status ───
+  "villa.occupied": { es: "Ocupada", en: "Occupied" },
+  "villa.vacant": { es: "Vacia", en: "Vacant" },
+  "villa.arriving": { es: "Llegada Hoy", en: "Arriving Today" },
+  "villa.cleaning": { es: "Limpieza", en: "Cleaning" },
+  "villa.checkout": { es: "Salida Hoy", en: "Checkout Today" },
+  "villa.maintenance": { es: "Mantenimiento", en: "Maintenance" },
+
+  // ─── Cleaning Status ───
+  "cleaning.pending": { es: "Pendiente", en: "Pending" },
+  "cleaning.in_progress": { es: "En Proceso", en: "In Progress" },
+  "cleaning.submitted": {
+    es: "Enviada — Esperando Aprobacion",
+    en: "Submitted — Awaiting Approval",
+  },
+  "cleaning.approved": { es: "Lista para Huesped", en: "Ready for Guest" },
+
+  // ─── Assign Guest Modal ───
+  "modal.assign_guest": { es: "Asignar Huesped", en: "Assign Guest" },
+  "modal.guest_name": { es: "Nombre del Huesped", en: "Guest Name" },
+  "modal.guests_count": { es: "Huespedes", en: "Guests" },
+  "modal.phone": { es: "Telefono", en: "Phone" },
+  "modal.check_in": { es: "Check-in", en: "Check-in" },
+  "modal.check_out": { es: "Check-out", en: "Check-out" },
+  "modal.allergies": {
+    es: "Alergias (separadas por coma)",
+    en: "Allergies (comma separated)",
+  },
+  "modal.notes": { es: "Notas", en: "Notes" },
+  "modal.vip_guest": { es: "Huesped VIP", en: "VIP Guest" },
+
+  // ─── Move Guest Modal ───
+  "modal.move_guest": { es: "Mover Huesped", en: "Move Guest" },
+  "modal.no_available_villas": {
+    es: "No hay villas disponibles",
+    en: "No villas available",
+  },
+  "modal.move_to": { es: "Mover", en: "Move" },
+
+  // ─── Maintenance Modal ───
+  "modal.maintenance_title": {
+    es: "Reportar Mantenimiento",
+    en: "Report Maintenance",
+  },
+  "modal.problem_description": {
+    es: "Descripcion del problema",
+    en: "Problem description",
+  },
+  "modal.urgent": {
+    es: "Urgente (afecta seguridad o comodidad del huesped)",
+    en: "Urgent (affects guest safety or comfort)",
+  },
+  "modal.submit_maintenance": {
+    es: "Reportar Mantenimiento",
+    en: "Report Maintenance",
+  },
+
+  // ─── Status Change Modal ───
+  "modal.change_status": { es: "Cambiar Estado", en: "Change Status" },
+
+  // ─── Ops Overview Page ───
+  "ops.todays_guests": { es: "Huespedes Hoy", en: "Today's Guests" },
+  "ops.current_occupancy": { es: "Ocupacion actual", en: "Current occupancy" },
+  "ops.weekly_food_profit": {
+    es: "Ganancia Semanal F&B",
+    en: "Weekly Food Profit",
+  },
+  "ops.with_transport": {
+    es: "Con costos de transporte",
+    en: "With transport costs",
+  },
+  "ops.weekly_transport": {
+    es: "Costo Transporte Semanal",
+    en: "Weekly Transport Cost",
+  },
+  "ops.hidden_cost": {
+    es: "Costo oculto por plato",
+    en: "Hidden cost per plate",
+  },
+  "ops.staff_questions": {
+    es: "Preguntas Staff/Dia",
+    en: "Staff Questions/Day",
+  },
+  "ops.via_bot": { es: "Via Staff Bot", en: "Via Staff Bot" },
+  "ops.pending_approvals": {
+    es: "Aprobaciones Pendientes",
+    en: "Pending Approvals",
+  },
+  "ops.checklists_awaiting": {
+    es: "Checklists esperando revision",
+    en: "Checklists awaiting review",
+  },
+  "ops.low_stock_items": { es: "Items Bajo Stock", en: "Low Stock Items" },
+  "ops.below_minimum": {
+    es: "Por debajo del minimo",
+    en: "Below minimum threshold",
+  },
+  "ops.db_not_configured": {
+    es: "Base de Datos No Configurada",
+    en: "Database Not Configured",
+  },
+  "ops.db_not_configured_desc": {
+    es: "Las variables de entorno de Supabase no estan disponibles. Deben configurarse en Vercel y redesplegar el proyecto.",
+    en: "Supabase environment variables are not available. They need to be set in Vercel and the project redeployed.",
+  },
+  "ops.whats_new": { es: "Novedades en v2.0", en: "What's New in v2.0" },
+  "ops.whats_new_desc": {
+    es: "Calendario de ocupacion diaria + costos de transporte = numeros reales, no estimaciones",
+    en: "Daily occupancy calendar + transport costs = real numbers, not guesses",
+  },
+
   // Navigation
-  "nav.overview": { en: "Overview", es: "Resumen" },
-  "nav.welcome_guide": { en: "Welcome Guide", es: "Guía de Bienvenida" },
+  "nav.overview": { es: "Resumen", en: "Overview" },
+  "nav.bookings": { es: "Reservas", en: "Bookings" },
+  "nav.deposits": { es: "Depositos", en: "Deposits" },
+  "nav.welcome_guide": { en: "Welcome Guide", es: "Guia de Bienvenida" },
   "nav.requirements": { en: "Requirements", es: "Requisitos" },
   "nav.fb_pl": { en: "F&B P&L", es: "P&L A&B" },
   "nav.revenue": { en: "Revenue", es: "Ingresos" },
   "nav.occupancy": { en: "Occupancy", es: "Ocupación" },
+  "nav.schedule": { en: "Staff Schedule", es: "Horarios" },
   "nav.staff_bot": { en: "Staff Bot", es: "Bot Staff" },
   "nav.booking_bot": { en: "Booking Bot", es: "Bot Reservas" },
   "nav.housekeeping": { en: "Housekeeping QC", es: "Control Limpieza" },
+  "nav.cleaning_priority": {
+    en: "Cleaning Priority",
+    es: "Prioridad Limpieza",
+  },
   "nav.maintenance": { en: "Maintenance QC", es: "Control Mantenimiento" },
+  "nav.maintenance_schedule": { en: "Maint. Calendar", es: "Calendario Mant." },
+  "nav.preventive": { en: "Preventive", es: "Preventivo" },
+  "nav.suppliers": { en: "Suppliers", es: "Proveedores" },
+  "nav.vendors": { en: "Vendors", es: "Técnicos" },
   "nav.demo": { en: "Demo Guide", es: "Guía Demo" },
   "nav.property_map": { en: "Property Map", es: "Mapa Propiedad" },
+  "nav.reports": { en: "Reports", es: "Reportes" },
 
   // Header
   "header.title": {
@@ -312,10 +635,152 @@ const translations: Record<string, Record<Language, string>> = {
     en: "MachineMind AI Infrastructure — TVC Operations Intelligence v3.0",
     es: "MachineMind Infraestructura AI — TVC Inteligencia Operativa v3.0",
   },
+
+  // ─── Onboarding (Issue #11) ───
+  "onboarding.welcome": { es: "Bienvenido", en: "Welcome" },
+  "onboarding.skip": { es: "Saltar tutorial", en: "Skip tutorial" },
+  "onboarding.next": { es: "Siguiente", en: "Next" },
+  "onboarding.back": { es: "Atras", en: "Back" },
+  "onboarding.start": { es: "Comenzar a trabajar", en: "Start working" },
+  "onboarding.loading": { es: "Cargando...", en: "Loading..." },
+  "onboarding.redirecting": { es: "Redirigiendo...", en: "Redirecting..." },
+  "onboarding.step_tasks": {
+    es: "Aqui estan tus Tareas",
+    en: "Here are your Tasks",
+  },
+  "onboarding.step_checklists": {
+    es: "Como Completar un Checklist",
+    en: "How to Complete a Checklist",
+  },
+  "onboarding.step_bot": { es: "Como Usar el Bot", en: "How to Use the Bot" },
+  "onboarding.step_inventory": {
+    es: "Como Registrar Inventario",
+    en: "How to Log Inventory",
+  },
+  "onboarding.step_pos": {
+    es: "Sistema de Pedidos (POS)",
+    en: "Order System (POS)",
+  },
+  "onboarding.step_ready": { es: "Listo!", en: "Ready!" },
+  "onboarding.reset_title": { es: "Repetir Tutorial", en: "Repeat Tutorial" },
+  "onboarding.reset_button": {
+    es: "Mostrar de nuevo",
+    en: "Show again",
+  },
+  "onboarding.reset_desc": {
+    es: "Repasa como usar las herramientas principales",
+    en: "Review how to use the main tools",
+  },
+
+  // ─── Training Page ───
+  "training.title": { es: "Capacitaciones", en: "Training" },
+  "training.subtitle": {
+    es: "Completa tus capacitaciones requeridas",
+    en: "Complete your required trainings",
+  },
+  "training.progress": { es: "Tu Progreso", en: "Your Progress" },
+  "training.required": {
+    es: "Capacitaciones Requeridas",
+    en: "Required Training",
+  },
+  "training.additional": {
+    es: "Capacitaciones Adicionales",
+    en: "Additional Training",
+  },
+  "training.required_badge": { es: "REQUERIDO", en: "REQUIRED" },
+  "training.recertification": {
+    es: "Recertificacion: cada",
+    en: "Recertification: every",
+  },
+  "training.days": { es: "dias", en: "days" },
+  "training.all_complete": {
+    es: "Todas las capacitaciones completadas!",
+    en: "All trainings completed!",
+  },
+  "training.no_required": {
+    es: "No hay capacitaciones requeridas para tu departamento",
+    en: "No required trainings for your department",
+  },
+
+  // ─── Waste Logging ───
+  "waste.title": { es: "Registro de Desperdicio", en: "Waste Logging" },
+  "waste.subtitle": {
+    es: "Registra ingredientes perdidos o desperdiciados",
+    en: "Log lost or wasted ingredients",
+  },
+  "waste.select_ingredient": {
+    es: "Selecciona ingrediente",
+    en: "Select ingredient",
+  },
+  "waste.quantity": { es: "Cantidad", en: "Quantity" },
+  "waste.reason": { es: "Razon", en: "Reason" },
+  "waste.notes": { es: "Notas (opcional)", en: "Notes (optional)" },
+  "waste.photo_required": {
+    es: "Foto requerida",
+    en: "Photo required",
+  },
+  "waste.submit": { es: "Registrar Desperdicio", en: "Log Waste" },
+  "waste.success": {
+    es: "Desperdicio registrado correctamente",
+    en: "Waste logged successfully",
+  },
+  "waste.reason.spoiled": { es: "Danado/Podrido", en: "Spoiled" },
+  "waste.reason.overprepped": { es: "Sobre-preparado", en: "Over-prepped" },
+  "waste.reason.returned": { es: "Devuelto", en: "Returned" },
+  "waste.reason.expired": { es: "Vencido", en: "Expired" },
+  "waste.reason.dropped": { es: "Caido/Accidente", en: "Dropped" },
+  "waste.reason.other": { es: "Otro", en: "Other" },
+  "waste.today_total": { es: "Total de hoy", en: "Today's total" },
+  "waste.recent": { es: "Registros recientes", en: "Recent logs" },
+  "waste.no_photo": {
+    es: "Debes tomar una foto del desperdicio",
+    en: "You must take a photo of the waste",
+  },
+
+  // ─── EOD Closing ───
+  "closing.title": { es: "Cierre del Dia", en: "End of Day" },
+  "closing.subtitle": {
+    es: "Reconciliacion y conteo de inventario",
+    en: "Reconciliation and inventory count",
+  },
+  "closing.shift": { es: "Turno", en: "Shift" },
+  "closing.shift.day": { es: "Dia", en: "Day" },
+  "closing.shift.night": { es: "Noche", en: "Night" },
+  "closing.high_value_items": {
+    es: "Items de Alto Valor",
+    en: "High-Value Items",
+  },
+  "closing.expected": { es: "Esperado", en: "Expected" },
+  "closing.actual": { es: "Actual", en: "Actual" },
+  "closing.variance": { es: "Diferencia", en: "Variance" },
+  "closing.summary": { es: "Resumen del Dia", en: "Day Summary" },
+  "closing.revenue": { es: "Ingresos", en: "Revenue" },
+  "closing.waste_cost": { es: "Costo Desperdicio", en: "Waste Cost" },
+  "closing.staff_meals": { es: "Comidas Staff", en: "Staff Meals" },
+  "closing.submit": { es: "Cerrar Dia", en: "Close Day" },
+  "closing.success": { es: "Cierre completado", en: "Closing completed" },
+  "closing.already_closed": {
+    es: "Ya existe un cierre para hoy",
+    en: "A closing already exists for today",
+  },
+  "closing.discrepancy_alert": {
+    es: "Hay discrepancias que requieren atencion",
+    en: "There are discrepancies that require attention",
+  },
+  "closing.no_discrepancies": {
+    es: "Sin discrepancias",
+    en: "No discrepancies",
+  },
+  "closing.notes": { es: "Notas del cierre", en: "Closing notes" },
+
+  // ─── Staff Navigation (updated) ───
+  "staff.waste": { es: "Desperdicio", en: "Waste" },
+  "staff.closing": { es: "Cierre", en: "Closing" },
 };
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>("en");
+  // Default to Spanish - staff speaks Spanish
+  const [lang, setLangState] = useState<Language>("es");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -323,6 +788,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (saved && (saved === "en" || saved === "es")) {
       setLangState(saved);
     }
+    // If no saved preference, keep Spanish as default
     setMounted(true);
   }, []);
 
@@ -352,16 +818,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Default translation function for fallback
+// Default translation function for fallback - Spanish first
 const defaultT = (key: string): string => {
   const translation = translations[key];
   if (!translation) return key;
-  return translation.en || key;
+  return translation.es || translation.en || key;
 };
 
-// Default context value for SSR/static generation
+// Default context value for SSR/static generation - Spanish first
 const defaultContextValue: LanguageContextType = {
-  lang: "en",
+  lang: "es",
   setLang: () => {},
   t: defaultT,
 };
