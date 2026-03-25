@@ -70,6 +70,8 @@ export type Database = {
           items: Json;
           notes: string | null;
           photos: Json | null;
+          qc_notes: string | null;
+          quality_score: number | null;
           rejection_reason: string | null;
           started_at: string | null;
           status: Database["public"]["Enums"]["checklist_status"] | null;
@@ -91,6 +93,8 @@ export type Database = {
           items?: Json;
           notes?: string | null;
           photos?: Json | null;
+          qc_notes?: string | null;
+          quality_score?: number | null;
           rejection_reason?: string | null;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["checklist_status"] | null;
@@ -112,6 +116,8 @@ export type Database = {
           items?: Json;
           notes?: string | null;
           photos?: Json | null;
+          qc_notes?: string | null;
+          quality_score?: number | null;
           rejection_reason?: string | null;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["checklist_status"] | null;
