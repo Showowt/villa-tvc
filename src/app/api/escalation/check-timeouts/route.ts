@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
+import { notifyEscalation } from "@/lib/push-notifications";
 
 // This endpoint should be called by a cron job every 5-10 minutes
 export async function GET() {

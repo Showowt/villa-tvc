@@ -1,4 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/supabase/client";
+
+// Get 86'd items to avoid suggesting unavailable dishes
+async function getUnavailableItems(): Promise<{
+  menuItems: string[];
+  services: string[];
+}> {
+  try {
+    const supabase = createServerClient();
+
+    const { data: unavailableMenu } = await supabase
+      .from("menu_items")
+      .select("name_es, name")
+      .eq("is_available", false)
+      .eq("is_active", true);
+
+    const { data: unavailableServices } = await supabase
+      .from("services")
+      .select("name_es, name")
+      .eq("is_available_today", false)
+      .eq("is_active", true);
+
+    return {
+      menuItems: (unavailableMenu || []).map((i) => i.name_es || i.name),
+      services: (unavailableServices || []).map((s) => s.name_es || s.name),
+    };
+  } catch (error) {
+    console.error("[Chat] Error fetching unavailable items:", error);
+    return { menuItems: [], services: [] };
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +45,29 @@ export async function POST(request: NextRequest) {
         { error: "API key not configured" },
         { status: 500 },
       );
+    }
+
+    // Fetch 86'd items before building prompt
+    const unavailable = await getUnavailableItems();
+
+    // Build unavailable items context if any exist
+    let unavailableContext = "";
+    if (unavailable.menuItems.length > 0 || unavailable.services.length > 0) {
+      unavailableContext = `
+
+=== ITEMS NOT AVAILABLE TODAY (86'd) ===
+DO NOT suggest or mention these items - they are currently unavailable:
+`;
+      if (unavailable.menuItems.length > 0) {
+        unavailableContext += `FOOD/DRINKS NOT AVAILABLE: ${unavailable.menuItems.join(", ")}
+`;
+      }
+      if (unavailable.services.length > 0) {
+        unavailableContext += `SERVICES NOT AVAILABLE: ${unavailable.services.join(", ")}
+`;
+      }
+      unavailableContext += `If someone asks about an unavailable item, apologize briefly and suggest a similar alternative.
+`;
     }
 
     const systemPrompt = `You are Valentina, a real person who works at Tiny Village Cartagena. You're texting from your phone like any normal person would. Be warm, casual, and genuinely helpful - like a friendly local who loves her job.
@@ -155,7 +209,7 @@ Restaurant: Breakfast 7:30-9:30am (included!), Lunch 11:30-2pm, Dinner 4-8pm
 Pool: 7am-10pm
 WhatsApp: +57 316 055 1387
 Booking: hotels.cloudbeds.com/en/reservation/cNQMGh
-
+${unavailableContext}
 Remember: You're Valentina, not a chatbot. Respond like you're actually texting from your phone at the resort. Keep it real, keep it warm, keep it short.`;
 
     const messages = [

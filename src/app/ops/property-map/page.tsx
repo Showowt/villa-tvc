@@ -1,16 +1,41 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { useRealtimeVillaStatus } from "@/hooks";
+import { useRealtimeChecklists as useRealtimeChecklistsEnhanced } from "@/hooks/useRealtimeVillas";
+import {
+  validateOverbooking,
+  validateVillaAvailability,
+  ERROR_MESSAGES,
+  type VillaStatusType,
+} from "@/lib/validation";
+import {
+  FloatingConnectionStatus,
+  InlineConnectionStatus,
+} from "@/components/ui/ConnectionStatus";
+import type { Database } from "@/types/database";
 
 // ═══════════════════════════════════════════════════════════════
 // TVC PROPERTY MAP — COMPLETE OPERATIONS INTERFACE
 // Villa colors from architectural blueprint (D. Arqui Restauro S.A.S)
 // Full guest management, status toggling, workflows
+// Issue #40 — OVERBOOKING PROTECTION added
+// Issue #81 — REALTIME updates integrated with connection status
 // ═══════════════════════════════════════════════════════════════
+
+type Checklist = Database["public"]["Tables"]["checklists"]["Row"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseAny = any;
+
+// Toast notification state
+interface Toast {
+  id: number;
+  message: string;
+  type: "success" | "error" | "warning";
+}
 
 interface Villa {
   id: string;
@@ -50,6 +75,7 @@ interface VillaState {
   guest: Guest | null;
   maintenanceNotes: string;
   maintenanceUrgent: boolean;
+  currentTab: number; // Issue #18: Cuenta corriente / Running tab
 }
 
 interface Facility {
@@ -402,6 +428,7 @@ const ActionBtn = ({
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 export default function TVCPropertyMap() {
+  const router = useRouter();
   const [villaStates, setVillaStates] = useState<{ [key: string]: VillaState }>(
     {},
   );
@@ -422,6 +449,39 @@ export default function TVCPropertyMap() {
     notes: "",
   });
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // ═══════════════════════════════════════════════════════════════
+  // REALTIME CHECKLIST SUBSCRIPTION (Issue #81)
+  // Auto-updates villa status when cleaning is approved
+  // ═══════════════════════════════════════════════════════════════
+  const {
+    checklists: realtimeChecklists,
+    summary: checklistSummary,
+    connectionStatus,
+    isConnected,
+  } = useRealtimeChecklistsEnhanced({
+    onApproval: (checklist: Checklist) => {
+      console.log(
+        "[PropertyMap] Checklist approved, updating villa:",
+        checklist.villa_id,
+      );
+      showToast(`✓ Limpieza aprobada para ${checklist.villa_id}`, "success");
+      // Trigger reload to update villa status
+      loadData();
+      setLastUpdate(new Date());
+    },
+    onRejection: (checklist: Checklist) => {
+      console.log("[PropertyMap] Checklist rejected:", checklist.villa_id);
+      showToast(`✗ Limpieza rechazada para ${checklist.villa_id}`, "warning");
+      loadData();
+      setLastUpdate(new Date());
+    },
+    onUpdate: () => {
+      // Any checklist change triggers a refresh
+      setLastUpdate(new Date());
+    },
+  });
 
   // Load data from Supabase
   const loadData = useCallback(async () => {
@@ -437,6 +497,7 @@ export default function TVCPropertyMap() {
         guest: null,
         maintenanceNotes: "",
         maintenanceUrgent: false,
+        currentTab: 0, // Issue #18: Running tab
       };
     });
 
@@ -546,6 +607,34 @@ export default function TVCPropertyMap() {
           },
         );
       }
+
+      // Issue #18: Fetch current tab totals for each villa
+      const { data: tabData } = await supabase
+        .from("order_logs")
+        .select("villa_id, total_price")
+        .gte("order_date", today)
+        .eq("is_staff_meal", false)
+        .eq("is_comp", false);
+
+      if (tabData) {
+        const tabTotals: { [key: string]: number } = {};
+        tabData.forEach(
+          (order: { villa_id: string | null; total_price: number | null }) => {
+            if (order.villa_id && order.total_price) {
+              const villaId = dbIdToId[order.villa_id];
+              if (villaId) {
+                tabTotals[villaId] =
+                  (tabTotals[villaId] || 0) + order.total_price;
+              }
+            }
+          },
+        );
+        Object.entries(tabTotals).forEach(([villaId, total]) => {
+          if (newStates[villaId]) {
+            newStates[villaId].currentTab = total;
+          }
+        });
+      }
     } catch (err) {
       console.error("[PropertyMap] Error loading data:", err);
     }
@@ -623,8 +712,76 @@ export default function TVCPropertyMap() {
     setShowStatusModal(false);
   };
 
+  // Toast notification handler
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const showToast = (message: string, type: Toast["type"] = "error") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
   const handleAssignGuest = () => {
-    if (!selectedVilla || !editForm.name.trim()) return;
+    if (!selectedVilla || !editForm.name.trim()) {
+      showToast("El nombre del huésped es requerido", "error");
+      return;
+    }
+
+    const villa = VILLAS.find((v) => v.id === selectedVilla);
+    if (!villa) return;
+
+    const currentState = villaStates[selectedVilla];
+
+    // ═══════════════════════════════════════════════════════════════
+    // OVERBOOKING PROTECTION (Issue #40)
+    // ═══════════════════════════════════════════════════════════════
+
+    // 1. Validate guest count against villa capacity
+    const overbookingCheck = validateOverbooking(
+      editForm.guests,
+      villa.maxGuests,
+    );
+    if (!overbookingCheck.valid) {
+      showToast(
+        overbookingCheck.error || ERROR_MESSAGES.guest_count_exceeded,
+        "error",
+      );
+      return;
+    }
+
+    // 2. Validate villa is available (not in maintenance/cleaning)
+    const availabilityCheck = validateVillaAvailability(
+      currentState.status as VillaStatusType,
+      { allowCheckoutToday: false },
+    );
+    if (!availabilityCheck.available) {
+      showToast(availabilityCheck.error || "Villa no disponible", "error");
+      return;
+    }
+
+    // 3. Warning for checkout today but not yet cleaned
+    if (
+      currentState.status === "checkout" &&
+      currentState.cleaningState !== "approved"
+    ) {
+      showToast(
+        "Advertencia: Esta villa tiene checkout hoy pero aún no ha sido limpiada. Proceda con precaución.",
+        "warning",
+      );
+    }
+
+    // 4. Validate dates
+    if (editForm.checkIn && editForm.checkOut) {
+      if (new Date(editForm.checkOut) <= new Date(editForm.checkIn)) {
+        showToast(
+          "La fecha de check-out debe ser posterior al check-in",
+          "error",
+        );
+        return;
+      }
+    }
+
     const nights =
       editForm.checkIn && editForm.checkOut
         ? Math.ceil(
@@ -633,6 +790,7 @@ export default function TVCPropertyMap() {
               86400000,
           )
         : 1;
+
     updateVilla(selectedVilla, {
       status: "occupied",
       cleaningState: "approved",
@@ -653,6 +811,11 @@ export default function TVCPropertyMap() {
         notes: editForm.notes,
       },
     });
+
+    showToast(
+      `Huésped ${editForm.name} asignado a Villa ${villa.name}`,
+      "success",
+    );
     setShowAssignModal(false);
     setEditForm({
       name: "",
@@ -807,6 +970,53 @@ export default function TVCPropertyMap() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Connection Status + Pending Approvals (Issue #81) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginRight: 8,
+          }}
+        >
+          <InlineConnectionStatus />
+          {checklistSummary.complete > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 10px",
+                background: "#F59E0B20",
+                border: "1px solid #F59E0B50",
+                borderRadius: 8,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#F59E0B",
+              }}
+            >
+              <span style={{ fontSize: 12 }}>⏳</span>
+              {checklistSummary.complete} pendiente
+              {checklistSummary.complete > 1 ? "s" : ""}
+            </div>
+          )}
+          {lastUpdate && (
+            <div
+              style={{
+                fontSize: 9,
+                color: "#94A3B8",
+                fontWeight: 500,
+              }}
+            >
+              Actualizado:{" "}
+              {lastUpdate.toLocaleTimeString("es-CO", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -1194,6 +1404,28 @@ export default function TVCPropertyMap() {
                     }}
                   >
                     {state.guest.name}
+                  </div>
+                )}
+
+                {/* Issue #18: Current tab amount */}
+                {state.currentTab > 0 && (
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontSize: 8,
+                      fontWeight: 800,
+                      color: state.currentTab > 300000 ? "#F59E0B" : "#10B981",
+                      textAlign: "center",
+                      background:
+                        state.currentTab > 300000
+                          ? "rgba(245,158,11,0.15)"
+                          : "rgba(16,185,129,0.15)",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      border: `1px solid ${state.currentTab > 300000 ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)"}`,
+                    }}
+                  >
+                    ${(state.currentTab / 1000).toFixed(0)}K
                   </div>
                 )}
               </div>
@@ -1828,9 +2060,17 @@ export default function TVCPropertyMap() {
                   >
                     🔧 Reportar Mantenimiento
                   </ActionBtn>
+                  <ActionBtn
+                    color="#0066CC"
+                    onClick={() =>
+                      router.push(`/ops/villa/${selectedVilla}/history`)
+                    }
+                  >
+                    📊 Ver Historial Villa
+                  </ActionBtn>
                   {sel.state.guest && (
                     <>
-                      <ActionBtn color="#0066CC" onClick={() => {}}>
+                      <ActionBtn color="#64748B" onClick={() => {}}>
                         📋 Ver Detalles Huésped
                       </ActionBtn>
                       <ActionBtn
@@ -2387,6 +2627,58 @@ export default function TVCPropertyMap() {
           </div>
         </div>
       )}
+
+      {/* Toast Notifications (Issue #61) */}
+      <div
+        style={{
+          position: "fixed",
+          top: 20,
+          right: 20,
+          zIndex: 200,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 10,
+              background:
+                toast.type === "success"
+                  ? "#10B981"
+                  : toast.type === "warning"
+                    ? "#F59E0B"
+                    : "#EF4444",
+              color: "white",
+              fontSize: 13,
+              fontWeight: 600,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              maxWidth: 320,
+              animation: "slideIn 0.3s ease",
+            }}
+          >
+            {toast.type === "success" && "✓ "}
+            {toast.type === "warning" && "⚠️ "}
+            {toast.type === "error" && "✗ "}
+            {toast.message}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+
+      {/* Floating Connection Status (Issue #81) */}
+      <FloatingConnectionStatus
+        position="bottom-left"
+        autoHideWhenConnected={true}
+      />
     </div>
   );
 }

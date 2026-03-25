@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#10B981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sin Conexion - TVC Operations</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --emerald-500: #10B981;
+      --emerald-600: #059669;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-400: #94a3b8;
+      --slate-300: #cbd5e1;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--slate-900);
+      color: var(--white);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--emerald-500), var(--emerald-600));
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 24px;
+      margin: 0 auto 24px;
+      box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+    }
+
+    .wifi-icon {
+      margin-bottom: 24px;
+    }
+
+    .wifi-icon svg {
+      width: 64px;
+      height: 64px;
+      color: var(--emerald-500);
+      opacity: 0.8;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: var(--slate-300);
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      color: var(--slate-400);
+      margin-bottom: 8px;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--slate-800);
+      padding: 8px 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: var(--slate-300);
+    }
+
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
+    }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+      padding: 16px 32px;
+      background: var(--emerald-500);
+      color: var(--white);
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 56px;
+      min-width: 200px;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .retry-btn:hover {
+      background: var(--emerald-600);
+      transform: translateY(-1px);
+    }
+
+    .retry-btn:active {
+      background: var(--emerald-600);
+      transform: translateY(0);
+    }
+
+    .retry-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .retry-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .tips {
+      margin-top: 40px;
+      padding: 20px;
+      background: var(--slate-800);
+      border-radius: 16px;
+      text-align: left;
+    }
+
+    .tips h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--emerald-500);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .tips ul {
+      list-style: none;
+      font-size: 14px;
+      color: var(--slate-300);
+    }
+
+    .tips li {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tips li svg {
+      width: 18px;
+      height: 18px;
+      color: var(--emerald-500);
+      flex-shrink: 0;
+    }
+
+    .tips li:not(:last-child) {
+      border-bottom: 1px solid var(--slate-700);
+    }
+
+    .cached-pages {
+      margin-top: 24px;
+    }
+
+    .cached-pages h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--slate-400);
+      margin-bottom: 12px;
+    }
+
+    .cached-pages a {
+      display: inline-block;
+      background: var(--slate-800);
+      color: var(--emerald-500);
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .cached-pages a:hover {
+      background: var(--slate-700);
+    }
+
+    .pending-indicator {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 12px;
+      font-size: 13px;
+      color: #fbbf24;
+      display: none;
+    }
+
+    .pending-indicator.visible {
+      display: block;
+    }
+
+    .footer {
+      margin-top: 40px;
+      font-size: 12px;
+      color: var(--slate-700);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">TVC</div>
+
+    <div class="wifi-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+        <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="status-badge">
+      <span class="dot"></span>
+      <span>Modo Offline</span>
+    </div>
+
+    <h1>Sin Conexion</h1>
+    <p class="subtitle">Estas trabajando sin internet</p>
+    <p>Tus datos guardados estan seguros y se sincronizaran automaticamente cuando vuelvas a conectarte.</p>
+
+    <div id="pendingIndicator" class="pending-indicator">
+      <strong id="pendingCount">0</strong> cambios pendientes de sincronizar
+    </div>
+
+    <button class="retry-btn" id="retryBtn" onclick="retryConnection()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Reintentar conexion
+    </button>
+
+    <div class="tips">
+      <h3>Mientras tanto puedes:</h3>
+      <ul>
+        <li>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          Ver checklists guardados
+        </li>
+        <li>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          Consultar inventario cacheado
+        </li>
+        <li>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Revisar tareas pendientes
+        </li>
+        <li>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Completar formularios (se guardaran)
+        </li>
+      </ul>
+    </div>
+
+    <div class="cached-pages">
+      <h3>Paginas disponibles offline:</h3>
+      <a href="/staff/tasks">Tareas</a>
+      <a href="/staff/checklist">Checklist</a>
+      <a href="/staff/inventory">Inventario</a>
+      <a href="/staff/kitchen">Cocina</a>
+    </div>
+
+    <p class="footer">TVC Operations v2.0</p>
+  </div>
+
+  <script>
+    // Check pending queue from IndexedDB
+    async function checkPendingQueue() {
+      try {
+        const dbRequest = indexedDB.open('tvc-offline-db', 2);
+        dbRequest.onsuccess = function(event) {
+          const db = event.target.result;
+          if (db.objectStoreNames.contains('offline-queue')) {
+            const transaction = db.transaction('offline-queue', 'readonly');
+            const store = transaction.objectStore('offline-queue');
+            const countRequest = store.count();
+            countRequest.onsuccess = function() {
+              const count = countRequest.result;
+              const indicator = document.getElementById('pendingIndicator');
+              const countEl = document.getElementById('pendingCount');
+              if (count > 0) {
+                indicator.classList.add('visible');
+                countEl.textContent = count;
+              }
+            };
+          }
+        };
+      } catch (e) {
+        console.log('Could not check pending queue:', e);
+      }
+    }
+
+    // Retry connection
+    function retryConnection() {
+      const btn = document.getElementById('retryBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Conectando...';
+
+      // Try to fetch a simple resource
+      fetch('/manifest.json', { cache: 'no-store' })
+        .then(function(response) {
+          if (response.ok) {
+            // We're back online
+            window.location.href = '/staff/tasks';
+          } else {
+            showRetryError();
+          }
+        })
+        .catch(function() {
+          showRetryError();
+        });
+    }
+
+    function showRetryError() {
+      const btn = document.getElementById('retryBtn');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Reintentar conexion';
+
+      // Brief red flash to indicate failure
+      btn.style.background = '#ef4444';
+      setTimeout(function() {
+        btn.style.background = '';
+      }, 200);
+    }
+
+    // Listen for online event
+    window.addEventListener('online', function() {
+      window.location.href = '/staff/tasks';
+    });
+
+    // Check pending queue on load
+    checkPendingQueue();
+
+    // Periodically check for connection
+    setInterval(function() {
+      if (navigator.onLine) {
+        window.location.reload();
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

@@ -1,20 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import type { Json, Database } from "@/types/database";
-
-interface ChecklistItem {
-  task: string;
-  task_es: string;
-  photo_required: boolean;
-  completed: boolean;
-  photo_url?: string;
-  notes?: string;
-  completed_at?: string;
-}
+import {
+  checklistSubmitSchemaWithPhotos,
+  validateApiRequest,
+  ERROR_MESSAGES,
+} from "@/lib/validation";
+import { notifyChecklistSubmitted } from "@/lib/push-notifications";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // Validate with Zod schema (includes photo validation)
+    const validation = validateApiRequest(
+      checklistSubmitSchemaWithPhotos,
+      body,
+    );
+
+    if (!validation.success) {
+      // Check if error is about missing photos
+      const isMissingPhotos = validation.details.some((d) =>
+        d.includes("Fotos requeridas"),
+      );
+
+      return NextResponse.json(
+        {
+          error: isMissingPhotos
+            ? ERROR_MESSAGES.missing_photos
+            : validation.error,
+          details: validation.details,
+          message: isMissingPhotos
+            ? "Faltan fotos requeridas para algunas tareas completadas"
+            : "Datos de checklist inválidos",
+        },
+        { status: 400 },
+      );
+    }
+
     const {
       checklist_id,
       items,
@@ -22,54 +45,57 @@ export async function POST(request: NextRequest) {
       notes,
       duration_minutes,
       photos,
-    } = body as {
-      checklist_id?: string;
-      items: ChecklistItem[];
-      completed_by: string;
-      notes?: string;
-      duration_minutes?: number;
-      photos?: string[];
-    };
-
-    if (!items || !Array.isArray(items)) {
-      return NextResponse.json(
-        { error: "Items array is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!completed_by) {
-      return NextResponse.json(
-        { error: "completed_by (user_id) is required" },
-        { status: 400 },
-      );
-    }
+    } = validation.data;
 
     const supabase = createServerClient();
     const now = new Date().toISOString();
 
-    // Check if all required photo items have photos
-    const missingPhotos = items.filter(
-      (item) => item.photo_required && item.completed && !item.photo_url,
-    );
-
-    if (missingPhotos.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Missing required photos",
-          missing: missingPhotos.map((i) => i.task_es),
-        },
-        { status: 400 },
-      );
-    }
-
+    // Zod schema already validated required photos
     // Calculate completion stats
     const totalItems = items.length;
     const completedItems = items.filter((i) => i.completed).length;
     const completionRate = totalItems > 0 ? completedItems / totalItems : 0;
 
     if (checklist_id) {
-      // Update existing checklist
+      // Get the checklist to know its type and track first item timing
+      const { data: existingChecklist } = await supabase
+        .from("checklists")
+        .select("type, villa_id, started_at, first_item_at, items")
+        .eq("id", checklist_id)
+        .single();
+
+      // Determine if this is the first item being completed
+      let firstItemAt = existingChecklist?.first_item_at;
+      if (!firstItemAt && completedItems > 0) {
+        // Check if any items were just completed
+        interface ChecklistItemType {
+          completed?: boolean;
+        }
+        const previousItems = existingChecklist?.items as unknown as
+          | ChecklistItemType[]
+          | null;
+        const previouslyCompleted =
+          previousItems?.filter((i) => i.completed).length || 0;
+        if (completedItems > previouslyCompleted) {
+          firstItemAt = now;
+        }
+      }
+
+      // Calculate actual duration from started_at if available
+      let calculatedDuration = duration_minutes;
+      if (
+        !calculatedDuration &&
+        existingChecklist?.started_at &&
+        completionRate === 1
+      ) {
+        const start = new Date(existingChecklist.started_at);
+        const end = new Date(now);
+        calculatedDuration = Math.round(
+          (end.getTime() - start.getTime()) / (1000 * 60),
+        );
+      }
+
+      // Update existing checklist with time tracking
       const { data, error } = await supabase
         .from("checklists")
         .update({
@@ -80,8 +106,10 @@ export async function POST(request: NextRequest) {
               : ("in_progress" as const),
           completed_by: completionRate === 1 ? completed_by : null,
           completed_at: completionRate === 1 ? now : null,
+          submitted_at: completionRate === 1 ? now : null,
+          first_item_at: firstItemAt || null,
           notes: notes || null,
-          duration_minutes: duration_minutes || null,
+          duration_minutes: calculatedDuration || null,
           photos: photos ? (photos as unknown as Json) : null,
           updated_at: now,
         })
@@ -97,6 +125,75 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // If checklist is now complete, trigger supply consumption
+      let supplyConsumption = null;
+      if (completionRate === 1 && existingChecklist) {
+        try {
+          // Call supply consumption API
+          const consumeResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/supply/consume`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                checklist_type: existingChecklist.type,
+                villa_id: existingChecklist.villa_id,
+                user_id: completed_by,
+              }),
+            },
+          );
+
+          if (consumeResponse.ok) {
+            supplyConsumption = await consumeResponse.json();
+          }
+        } catch (supplyError) {
+          console.error(
+            "[checklist/submit] Supply consumption error:",
+            supplyError,
+          );
+          // Don't fail the whole request if supply consumption fails
+        }
+      }
+
+      // Send push notification to manager when checklist is completed
+      if (completionRate === 1) {
+        try {
+          // Get staff name
+          const { data: staffUser } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", completed_by)
+            .single();
+
+          // Get checklist type label
+          const checklistLabels: Record<string, string> = {
+            villa_retouch: "Retoque Villa",
+            villa_occupied: "Villa Ocupada",
+            villa_empty_arriving: "Villa Vacia (Llegada)",
+            villa_leaving: "Villa Salida",
+            pool_8am: "Piscina 8am",
+            pool_2pm: "Piscina 2pm",
+            pool_8pm: "Piscina 8pm",
+            breakfast_setup: "Setup Desayuno",
+            common_area: "Areas Comunes",
+          };
+
+          const typeLabel =
+            checklistLabels[existingChecklist?.type || ""] ||
+            existingChecklist?.type ||
+            "Checklist";
+
+          await notifyChecklistSubmitted(
+            typeLabel,
+            existingChecklist?.villa_id || null,
+            staffUser?.name || "Staff",
+          );
+        } catch (notifyError) {
+          console.error("[checklist/submit] Notification error:", notifyError);
+          // Don't fail the request if notification fails
+        }
+      }
+
       return NextResponse.json({
         success: true,
         checklist: data,
@@ -104,10 +201,13 @@ export async function POST(request: NextRequest) {
           total: totalItems,
           completed: completedItems,
           completion_rate: Math.round(completionRate * 100),
+          duration_minutes: calculatedDuration || null,
+          first_item_at: firstItemAt || null,
         },
+        supply_consumption: supplyConsumption,
         message:
           completionRate === 1
-            ? "Checklist completado y enviado para aprobación"
+            ? "Checklist completado y enviado para aprobacion"
             : `Progreso guardado: ${completedItems}/${totalItems} tareas`,
       });
     } else {

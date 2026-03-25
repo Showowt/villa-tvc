@@ -171,3 +171,276 @@ export async function getPurchaseOrders(status?: string) {
   if (error) throw error;
   return data;
 }
+
+// ============================================
+// GUEST STAY QUERIES (Issue #47)
+// ============================================
+
+// Get guest stay context for upsell timing
+export async function getGuestStayContext(guestId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("guest_stay_context")
+    .select("*")
+    .eq("guest_id", guestId)
+    .in("status", ["checked_in", "upcoming"])
+    .order("check_in_date", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error;
+  return data;
+}
+
+// Get all active guest stays (checked in today)
+export async function getActiveGuestStays() {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("guest_stay_context")
+    .select("*")
+    .eq("status", "checked_in")
+    .order("check_in_date", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Create or update guest stay
+export async function upsertGuestStay(stay: {
+  guest_id: string;
+  check_in_date: string;
+  check_out_date: string;
+  villa_name?: string;
+  status?: string;
+}) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("guest_stays")
+    .upsert(stay, { onConflict: "guest_id,check_in_date" })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Update guest stay status
+export async function updateGuestStayStatus(
+  stayId: string,
+  status: "upcoming" | "checked_in" | "checked_out" | "cancelled",
+) {
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("guest_stays")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", stayId);
+
+  if (error) throw error;
+}
+
+// ============================================
+// BOOKING FUNNEL QUERIES (Issue #48)
+// ============================================
+
+// Advance funnel stage
+export async function advanceFunnelStage(params: {
+  conversation_id?: string;
+  guest_id?: string;
+  guest_phone?: string;
+  stage: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase.rpc("advance_funnel_stage", {
+    p_conversation_id: params.conversation_id || null,
+    p_guest_id: params.guest_id || null,
+    p_guest_phone: params.guest_phone || null,
+    p_new_stage: params.stage,
+    p_source: params.source || "whatsapp",
+    p_metadata: params.metadata || {},
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+// Get funnel conversion rates
+export async function getFunnelConversionRates() {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("funnel_conversion_rates")
+    .select("*");
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Get daily funnel stats
+export async function getDailyFunnelStats(days: number = 30) {
+  const supabase = createServerClient();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const { data, error } = await supabase
+    .from("daily_funnel_stats")
+    .select("*")
+    .gte("date", startDate.toISOString().split("T")[0])
+    .order("date", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Get funnel summary for a conversation
+export async function getConversationFunnelHistory(conversationId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("booking_funnel")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("entered_at", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// ============================================
+// UPSELL TRACKING QUERIES (Issue #47)
+// ============================================
+
+// Log upsell suggestion
+export async function logUpsellSuggestion(params: {
+  guest_id: string;
+  conversation_id?: string;
+  upsell_type: string;
+  upsell_name: string;
+  trigger_reason: string;
+  message_content: string;
+}) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase.rpc("log_upsell_suggestion", {
+    p_guest_id: params.guest_id,
+    p_conversation_id: params.conversation_id || null,
+    p_upsell_type: params.upsell_type,
+    p_upsell_name: params.upsell_name,
+    p_trigger_reason: params.trigger_reason,
+    p_message_content: params.message_content,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+// Mark upsell as booked
+export async function markUpsellBooked(upsellId: string, revenueCop?: number) {
+  const supabase = createServerClient();
+  const { error } = await supabase.rpc("mark_upsell_booked", {
+    p_upsell_id: upsellId,
+    p_revenue_cop: revenueCop || null,
+  });
+
+  if (error) throw error;
+}
+
+// Get upsell performance metrics
+export async function getUpsellPerformance() {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("upsell_performance")
+    .select("*")
+    .order("times_suggested", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Get recent upsell suggestions for a guest
+export async function getGuestUpsellHistory(guestId: string) {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("upsell_suggestions")
+    .select("*")
+    .eq("guest_id", guestId)
+    .order("suggested_at", { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Check if upsell was already suggested today
+export async function wasUpsellSuggestedToday(
+  guestId: string,
+  upsellType: string,
+) {
+  const supabase = createServerClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { count, error } = await supabase
+    .from("upsell_suggestions")
+    .select("*", { count: "exact", head: true })
+    .eq("guest_id", guestId)
+    .eq("upsell_type", upsellType)
+    .gte("suggested_at", `${today}T00:00:00`);
+
+  if (error) throw error;
+  return (count || 0) > 0;
+}
+
+// ============================================
+// COMBINED ANALYTICS QUERIES
+// ============================================
+
+// Get funnel + upsell dashboard data
+export async function getFunnelDashboardData() {
+  const [funnelRates, upsellPerformance, dailyStats] = await Promise.all([
+    getFunnelConversionRates(),
+    getUpsellPerformance(),
+    getDailyFunnelStats(7),
+  ]);
+
+  // Calculate totals
+  const totalInquiries =
+    funnelRates.find((r) => r.stage === "inquiry")?.total_entries || 0;
+  const totalBooked =
+    funnelRates.find((r) => r.stage === "booked")?.total_entries || 0;
+  const overallConversionRate =
+    totalInquiries > 0
+      ? Math.round((totalBooked / totalInquiries) * 100 * 10) / 10
+      : 0;
+
+  const totalUpsellSuggestions = upsellPerformance.reduce(
+    (sum, u) => sum + u.times_suggested,
+    0,
+  );
+  const totalUpsellBooked = upsellPerformance.reduce(
+    (sum, u) => sum + u.times_booked,
+    0,
+  );
+  const totalUpsellRevenue = upsellPerformance.reduce(
+    (sum, u) => sum + u.total_revenue_cop,
+    0,
+  );
+  const upsellConversionRate =
+    totalUpsellSuggestions > 0
+      ? Math.round((totalUpsellBooked / totalUpsellSuggestions) * 100 * 10) / 10
+      : 0;
+
+  return {
+    funnel: {
+      stages: funnelRates,
+      total_inquiries: totalInquiries,
+      total_booked: totalBooked,
+      overall_conversion_rate: overallConversionRate,
+    },
+    upsells: {
+      performance: upsellPerformance,
+      total_suggestions: totalUpsellSuggestions,
+      total_booked: totalUpsellBooked,
+      total_revenue_cop: totalUpsellRevenue,
+      conversion_rate: upsellConversionRate,
+    },
+    daily_stats: dailyStats,
+  };
+}

@@ -7,6 +7,11 @@ import {
   onGuestAssigned,
   onGuestCheckout,
   onGuestMoved,
+  extendStay,
+  earlyCheckout,
+  walkInBooking,
+  dayVisitor,
+  checkoutDayVisitor,
 } from "@/lib/operations-hub";
 import {
   statusChangeSchema,
@@ -23,6 +28,72 @@ const assignGuestSchema = z.object({
   guest: guestSchemaWithDateValidation,
   assignedBy: z.string().optional(),
   maxGuests: z.number().int().min(1).max(20).optional(),
+});
+
+// Schema for extend_stay action (Issue #72)
+const extendStaySchema = z.object({
+  action: z.literal("extend_stay"),
+  villaNumber: z.number().int().min(1).max(10),
+  bookingId: z.string().uuid(),
+  newCheckoutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  extendedBy: z.string(),
+});
+
+// Schema for early_checkout action (Issue #73)
+const earlyCheckoutSchema = z.object({
+  action: z.literal("early_checkout"),
+  villaNumber: z.number().int().min(1).max(10),
+  bookingId: z.string().uuid(),
+  actualCheckoutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  processedBy: z.string(),
+  reason: z.string().optional(),
+});
+
+// Schema for walk_in action (Issue #74)
+const walkInSchema = z.object({
+  action: z.literal("walk_in"),
+  villaNumber: z.number().int().min(1).max(10),
+  villaId: z.string(),
+  guestInfo: z.object({
+    name: z.string().min(2),
+    phone: z.string().optional(),
+    email: z.string().email().optional(),
+    country: z.string().optional(),
+    adults: z.number().int().min(1).max(10),
+    children: z.number().int().min(0).max(10).default(0),
+    nights: z.number().int().min(1).max(30),
+    notes: z.string().optional(),
+    ratePerNight: z.number().min(0).optional(),
+    paymentMethod: z.string().optional(),
+  }),
+  bookedBy: z.string(),
+});
+
+// Schema for day_visitor action (Issue #75)
+const dayVisitorSchema = z.object({
+  action: z.literal("day_visitor"),
+  partySize: z.number().int().min(1).max(20),
+  expectedDuration: z.enum(["2h", "half_day", "full_day"]),
+  loggedBy: z.string(),
+  options: z
+    .object({
+      contactName: z.string().optional(),
+      phone: z.string().optional(),
+      notes: z.string().optional(),
+      hostVilla: z.number().int().min(1).max(10).optional(),
+      hostGuestName: z.string().optional(),
+      arrivalTime: z.string().optional(),
+      preAuthorizedSpend: z.number().min(0).optional(),
+    })
+    .optional(),
+});
+
+// Schema for checkout_day_visitor action
+const checkoutDayVisitorSchema = z.object({
+  action: z.literal("checkout_day_visitor"),
+  visitorId: z.string().uuid(),
+  processedBy: z.string(),
+  consumptionTotal: z.number().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {

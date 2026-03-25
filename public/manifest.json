@@ -1,0 +1,105 @@
+{
+  "name": "TVC Operations",
+  "short_name": "TVC Ops",
+  "description": "Portal de Operaciones - Tiny Village Cartagena",
+  "start_url": "/staff/tasks",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10B981",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "id": "/staff/tasks",
+  "icons": [
+    {
+      "src": "/tvc-assets/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tvc-assets/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/tvc-assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "es",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Tareas",
+      "short_name": "Tareas",
+      "description": "Ver tareas pendientes",
+      "url": "/staff/tasks"
+    },
+    {
+      "name": "Checklist",
+      "short_name": "Checklist",
+      "description": "Checklists de apertura/cierre",
+      "url": "/staff/checklist"
+    },
+    {
+      "name": "Inventario",
+      "short_name": "Inventario",
+      "description": "Control de inventario",
+      "url": "/staff/inventory"
+    },
+    {
+      "name": "Cocina",
+      "short_name": "Cocina",
+      "description": "Ordenes de cocina",
+      "url": "/staff/kitchen"
+    }
+  ],
+  "handle_links": "preferred"
+}

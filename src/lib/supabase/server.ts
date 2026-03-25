@@ -1,14 +1,42 @@
+// ═══════════════════════════════════════════════════════════════
+// TVC SUPABASE SERVER CLIENT - P0 Day 1 Fix
+// Issue #82 — Clear errors when env vars missing
+// For Server Components with auth cookie handling
+// ═══════════════════════════════════════════════════════════════
+
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
+import { isConfigured } from "@/lib/env";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 
-// Server component client with cookie handling (for auth)
+// ─────────────────────────────────────────────────────────────────
+// AUTH SERVER CLIENT
+// For Server Components that need to read auth state
+// ─────────────────────────────────────────────────────────────────
 export async function createAuthServerClient() {
   const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL\n\n" +
+        "Fix: Add to .env.local or Vercel environment variables.\n" +
+        "Get from: Supabase Dashboard > Project Settings > API\n\n" +
+        "See /error-config for full diagnostic.",
+    );
+  }
+
+  if (!supabaseKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY\n\n" +
+        "Fix: Add to .env.local or Vercel environment variables.\n" +
+        "Get from: Supabase Dashboard > Project Settings > API > anon key\n\n" +
+        "See /error-config for full diagnostic.",
+    );
+  }
 
   return createSupabaseServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
@@ -27,37 +55,59 @@ export async function createAuthServerClient() {
             cookieStore.set(name, value, options);
           });
         } catch {
-          // Server Component - ignore
+          // Server Component - ignore cookie set errors
         }
       },
     },
   });
 }
 
-// Get current user with role
+// ─────────────────────────────────────────────────────────────────
+// GET CURRENT USER
+// Returns user profile with role if authenticated
+// ─────────────────────────────────────────────────────────────────
 export async function getCurrentUser(): Promise<User | null> {
-  const supabase = await createAuthServerClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  // Check if Supabase is configured before attempting
+  if (
+    !isConfigured("NEXT_PUBLIC_SUPABASE_URL") ||
+    !isConfigured("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+  ) {
+    console.warn(
+      "[Auth] Supabase not configured - getCurrentUser returning null",
+    );
     return null;
   }
 
-  // Get user profile with role
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("auth_id", user.id)
-    .single();
+  try {
+    const supabase = await createAuthServerClient();
 
-  return profile as User | null;
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return null;
+    }
+
+    // Get user profile with role
+    const { data: profile } = await supabase
+      .from("users")
+      .select("*")
+      .eq("auth_id", user.id)
+      .single();
+
+    return profile as User | null;
+  } catch (error) {
+    console.error("[Auth] Error getting current user:", error);
+    return null;
+  }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// ROLE-BASED ACCESS CONTROL
 // Check if user has required role
+// ─────────────────────────────────────────────────────────────────
 export async function requireRole(
   allowedRoles: ("owner" | "manager" | "staff" | "guest")[],
 ) {
@@ -81,4 +131,14 @@ export async function requireRole(
   }
 
   return { authorized: true, user, error: null } as const;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AVAILABILITY CHECK
+// ─────────────────────────────────────────────────────────────────
+export function isAuthAvailable(): boolean {
+  return (
+    isConfigured("NEXT_PUBLIC_SUPABASE_URL") &&
+    isConfigured("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+  );
 }

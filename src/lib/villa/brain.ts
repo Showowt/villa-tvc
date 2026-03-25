@@ -6,6 +6,13 @@ import type {
   Language,
   VillaBrainInput,
   VillaBrainOutput,
+  VillaBrainInputExtended,
+  VillaBrainOutputExtended,
+  GuestStayContext,
+  StayPhase,
+  UpsellType,
+  TimingBasedUpsell,
+  TIMING_BASED_UPSELLS,
 } from "@/types";
 import { TVC_KNOWLEDGE, CARTAGENA_KNOWLEDGE, BLIND_SPOTS } from "./knowledge";
 
@@ -412,4 +419,417 @@ export function checkBlindSpots(
   }
 
   return relevantBlindSpots.slice(0, 2); // Max 2 blind spots per response
+}
+
+// ============================================
+// TIMING-BASED UPSELL SYSTEM (Issue #47)
+// ============================================
+
+// Define upsells inline since importing from types causes circular dependency
+const TIMING_UPSELLS: TimingBasedUpsell[] = [
+  {
+    stay_phase: "arrival_day",
+    upsell_type: "sunset_tour",
+    upsell_name: "Sunset Bay Tour",
+    message_en:
+      "Welcome to TVC! Since you just arrived, would you be interested in catching tonight's sunset from the water? Our sunset cruise is magical - golden hour views of Cartagena's skyline with cocktails!",
+    message_es:
+      "Bienvenido a TVC! Ya que acabas de llegar, te interesaria ver el atardecer de esta noche desde el agua? Nuestro crucero al atardecer es magico - vistas de la hora dorada del skyline de Cartagena con cocteles!",
+    priority: 10,
+  },
+  {
+    stay_phase: "day_two",
+    upsell_type: "islands_excursion",
+    upsell_name: "Rosario Islands Day Trip",
+    message_en:
+      "Perfect timing! Day 2 is ideal for our Rosario Islands trip - crystal clear water, island hopping, snorkeling. We can take you on our 39ft Colibri yacht. Want me to share the details?",
+    message_es:
+      "Momento perfecto! El dia 2 es ideal para nuestro viaje a las Islas del Rosario - agua cristalina, saltar de isla en isla, snorkel. Podemos llevarte en nuestro yate Colibri de 39 pies. Quieres que te comparta los detalles?",
+    priority: 9,
+  },
+  {
+    stay_phase: "mid_stay",
+    upsell_type: "private_brunch",
+    upsell_name: "Village People Bottomless Brunch",
+    message_en:
+      "How about treating yourself to our famous Village People brunch? Bottomless mimosas, bottomless tapas - it's THE party brunch experience! Perfect way to celebrate your vacation",
+    message_es:
+      "Que tal darte un gusto con nuestro famoso brunch Village People? Mimosas ilimitadas, tapas ilimitadas - es LA experiencia de brunch de fiesta! Perfecta forma de celebrar tus vacaciones",
+    priority: 7,
+  },
+  {
+    stay_phase: "last_full_day",
+    upsell_type: "special_dinner",
+    upsell_name: "Cartagena Culture Private Dinner",
+    message_en:
+      "It's your last full day with us! Want to make it special? Our 4-course 'Cartagena Culture' private dinner is unforgettable - mango ceviche, garlic shrimp, slow-braised posta cartagenera, and enyucado with vanilla ice cream. Perfect finale!",
+    message_es:
+      "Es tu ultimo dia completo con nosotros! Quieres hacerlo especial? Nuestra cena privada de 4 platos 'Cultura de Cartagena' es inolvidable - ceviche de mango, camarones al ajillo, posta cartagenera, y enyucado con helado de vainilla. Final perfecto!",
+    priority: 10,
+  },
+  {
+    stay_phase: "departure_day",
+    upsell_type: "late_checkout",
+    upsell_name: "Late Checkout",
+    message_en:
+      "Since it's your departure day, would you like late checkout? Enjoy a few more hours by the pool before you go - just let us know and we'll arrange it!",
+    message_es:
+      "Ya que es tu dia de salida, te gustaria salida tardia? Disfruta unas horas mas junto a la piscina antes de irte - solo avisanos y lo arreglamos!",
+    priority: 8,
+  },
+];
+
+// Get timing-based upsell suggestion for current stay phase
+function getTimingBasedUpsell(
+  stayContext: GuestStayContext | null,
+  language: Language,
+  conversationHistory: Message[],
+): {
+  type: UpsellType;
+  name: string;
+  message: string;
+  trigger_reason: string;
+} | null {
+  if (
+    !stayContext ||
+    stayContext.stay_phase === "pre_arrival" ||
+    stayContext.stay_phase === "other"
+  ) {
+    return null;
+  }
+
+  // Find matching upsell for current stay phase
+  const matchingUpsells = TIMING_UPSELLS.filter(
+    (u) => u.stay_phase === stayContext.stay_phase,
+  ).sort((a, b) => b.priority - a.priority);
+
+  if (matchingUpsells.length === 0) {
+    return null;
+  }
+
+  // Check if any of these upsells were already mentioned in conversation
+  const allText = conversationHistory
+    .map((m) => m.content)
+    .join(" ")
+    .toLowerCase();
+
+  for (const upsell of matchingUpsells) {
+    const keywords = upsell.upsell_name.toLowerCase().split(" ");
+    const alreadyMentioned = keywords.some(
+      (kw) => kw.length > 4 && allText.includes(kw),
+    );
+
+    if (!alreadyMentioned) {
+      return {
+        type: upsell.upsell_type as UpsellType,
+        name: upsell.upsell_name,
+        message: language === "es" ? upsell.message_es : upsell.message_en,
+        trigger_reason: `timing_${stayContext.stay_phase}_day_${stayContext.days_into_stay}`,
+      };
+    }
+  }
+
+  return null;
+}
+
+// Build enhanced system prompt with stay context
+function buildSystemPromptWithStayContext(
+  guest: Guest,
+  journeyStage: JourneyStage,
+  stayContext: GuestStayContext | null,
+): string {
+  const basePrompt = buildSystemPrompt(guest, journeyStage);
+
+  if (!stayContext) {
+    return basePrompt;
+  }
+
+  const stayContextSection = `
+
+## GUEST STAY CONTEXT (CRITICAL FOR TIMING)
+- Check-in Date: ${stayContext.check_in_date}
+- Check-out Date: ${stayContext.check_out_date}
+- Total Nights: ${stayContext.total_nights}
+- Day of Stay: ${stayContext.days_into_stay || "Not checked in yet"}
+- Days Remaining: ${stayContext.days_remaining || "N/A"}
+- Stay Phase: ${stayContext.stay_phase}
+- Villa: ${stayContext.villa_name || "Not assigned"}
+
+## TIMING-BASED UPSELL GUIDANCE
+Based on their stay phase (${stayContext.stay_phase}), naturally weave in relevant suggestions:
+
+${
+  stayContext.stay_phase === "arrival_day"
+    ? `
+- It's their ARRIVAL DAY! Welcome them warmly
+- Perfect time to suggest: Sunset Bay Tour (they can catch tonight's sunset!)
+- Don't be pushy - just mention it naturally if the conversation allows
+`
+    : ""
+}
+
+${
+  stayContext.stay_phase === "day_two"
+    ? `
+- It's their second day - they're settling in
+- Perfect time to suggest: Rosario Islands Day Trip (day 2 is ideal timing)
+- They've had a day to relax, now they might want adventure
+`
+    : ""
+}
+
+${
+  stayContext.stay_phase === "mid_stay"
+    ? `
+- They're in the middle of their trip
+- Perfect time to suggest: Village People Brunch, nightlife experience
+- They know the vibe now and might want to try more
+`
+    : ""
+}
+
+${
+  stayContext.stay_phase === "last_full_day"
+    ? `
+- It's their LAST FULL DAY - make it special!
+- Perfect time to suggest: Cartagena Culture Private Dinner (unforgettable finale)
+- Create urgency: "last chance to..."
+`
+    : ""
+}
+
+${
+  stayContext.stay_phase === "departure_day"
+    ? `
+- It's checkout day
+- Offer: Late checkout if they want more pool time
+- Ask about their experience, mention reviews
+- Thank them warmly and invite them back
+`
+    : ""
+}
+
+Remember: Don't force upsells. Only suggest when the conversation naturally allows it or when they ask about activities/dining.`;
+
+  return basePrompt + stayContextSection;
+}
+
+// ============================================
+// EXTENDED BRAIN FUNCTION (with stay context)
+// ============================================
+
+export async function generateVillaResponseExtended(
+  input: VillaBrainInputExtended,
+): Promise<VillaBrainOutputExtended> {
+  const {
+    guest,
+    conversation_history,
+    current_message,
+    journey_stage,
+    stay_context,
+  } = input;
+
+  // Detect language from current message
+  const languageDetected = detectLanguage(current_message);
+
+  // Check for escalation triggers
+  const escalationCheck = checkForEscalation(
+    current_message,
+    conversation_history,
+  );
+
+  // Get timing-based upsell suggestion
+  const upsellSuggestion = getTimingBasedUpsell(
+    stay_context || null,
+    languageDetected,
+    conversation_history,
+  );
+
+  // Build conversation messages for Claude
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  // Add conversation history
+  for (const msg of conversation_history) {
+    messages.push({
+      role: msg.role === "guest" ? "user" : "assistant",
+      content: msg.content,
+    });
+  }
+
+  // Add current message
+  messages.push({
+    role: "user",
+    content: current_message,
+  });
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: buildSystemPromptWithStayContext(
+        guest,
+        journey_stage,
+        stay_context || null,
+      ),
+      messages,
+    });
+
+    const responseText =
+      response.content[0].type === "text"
+        ? response.content[0].text
+        : "I apologize, but I encountered an issue. Please contact our team directly at (+57) 316 055 1387.";
+
+    // Check if response suggests journey stage change
+    let suggestedJourneyStage: JourneyStage | null = null;
+
+    // If they mention booking confirmation, suggest moving to 'booked'
+    if (
+      current_message.toLowerCase().includes("booked") ||
+      current_message.toLowerCase().includes("reservation") ||
+      current_message.toLowerCase().includes("reservé") ||
+      current_message.toLowerCase().includes("reserva")
+    ) {
+      if (journey_stage === "discovery") {
+        suggestedJourneyStage = "booked";
+      }
+    }
+
+    // If they mention checking out or leaving
+    if (
+      current_message.toLowerCase().includes("checkout") ||
+      current_message.toLowerCase().includes("leaving") ||
+      current_message.toLowerCase().includes("salir")
+    ) {
+      if (journey_stage === "on_property") {
+        suggestedJourneyStage = "departed";
+      }
+    }
+
+    // Detect funnel stage changes from message content
+    let funnelStageChange: string | null = null;
+    const lowerMessage = current_message.toLowerCase();
+    const lowerResponse = responseText.toLowerCase();
+
+    if (
+      lowerMessage.includes("available") ||
+      lowerMessage.includes("dates") ||
+      lowerMessage.includes("disponible")
+    ) {
+      funnelStageChange = "availability_checked";
+    }
+    if (
+      lowerResponse.includes("cloudbeds") ||
+      lowerResponse.includes("booking link")
+    ) {
+      funnelStageChange = "link_sent";
+    }
+    if (
+      lowerMessage.includes("booked") ||
+      lowerMessage.includes("reserved") ||
+      lowerMessage.includes("reservé")
+    ) {
+      funnelStageChange = "booked";
+    }
+
+    return {
+      response: responseText,
+      language_detected: languageDetected,
+      blind_spots_to_surface: [],
+      should_escalate: escalationCheck.shouldEscalate,
+      escalation_reason: escalationCheck.reason,
+      suggested_journey_stage: suggestedJourneyStage,
+      upsell_suggestion: upsellSuggestion || undefined,
+      funnel_stage_change:
+        funnelStageChange as VillaBrainOutputExtended["funnel_stage_change"],
+    };
+  } catch (error) {
+    console.error("[VillaBrain] Error generating response:", error);
+
+    // Fallback response based on detected language
+    const fallbackMessages: Record<Language, string> = {
+      en: "I apologize, but I'm having a moment! Please reach out to our team directly at (+57) 316 055 1387 or WhatsApp and they'll help you right away.",
+      es: "Disculpa, estoy teniendo un momento! Por favor contacta a nuestro equipo directamente al (+57) 316 055 1387 o WhatsApp y te ayudaran de inmediato.",
+      fr: "Je m'excuse, j'ai un petit probleme! Veuillez contacter notre equipe directement au (+57) 316 055 1387 ou WhatsApp et ils vous aideront immediatement.",
+    };
+
+    return {
+      response: fallbackMessages[languageDetected],
+      language_detected: languageDetected,
+      blind_spots_to_surface: [],
+      should_escalate: true,
+      escalation_reason: "AI response generation failed",
+      suggested_journey_stage: null,
+      upsell_suggestion: undefined,
+      funnel_stage_change: undefined,
+    };
+  }
+}
+
+// ============================================
+// FUNNEL STAGE DETECTION HELPERS
+// ============================================
+
+export function detectFunnelStageFromMessage(
+  message: string,
+  currentStage: string,
+): string | null {
+  const lower = message.toLowerCase();
+
+  // Inquiry -> Qualified (showing real interest)
+  if (currentStage === "inquiry") {
+    if (
+      lower.includes("how many") ||
+      lower.includes("price") ||
+      lower.includes("cost") ||
+      lower.includes("cuanto") ||
+      lower.includes("precio") ||
+      lower.includes("personas") ||
+      lower.includes("people") ||
+      lower.includes("group")
+    ) {
+      return "qualified";
+    }
+  }
+
+  // Qualified -> Availability Checked
+  if (currentStage === "qualified" || currentStage === "inquiry") {
+    if (
+      lower.includes("available") ||
+      lower.includes("disponible") ||
+      lower.includes("dates") ||
+      lower.includes("fechas") ||
+      lower.includes("when") ||
+      lower.includes("check-in") ||
+      lower.includes("llegada")
+    ) {
+      return "availability_checked";
+    }
+  }
+
+  // Any -> Booked
+  if (
+    lower.includes("booked") ||
+    lower.includes("reserved") ||
+    lower.includes("reservé") ||
+    lower.includes("reserva confirmada") ||
+    lower.includes("confirmation")
+  ) {
+    return "booked";
+  }
+
+  // Booked -> Arrived (check-in indicators)
+  if (currentStage === "booked") {
+    if (
+      lower.includes("arrived") ||
+      lower.includes("llegamos") ||
+      lower.includes("we're here") ||
+      lower.includes("estamos aqui") ||
+      lower.includes("checked in") ||
+      lower.includes("just got")
+    ) {
+      return "arrived";
+    }
+  }
+
+  return null;
 }

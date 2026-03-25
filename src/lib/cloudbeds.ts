@@ -1,109 +1,132 @@
 // ═══════════════════════════════════════════════════════════════
-// CLOUDBEDS INTEGRATION — OAuth 2.0 + Reservations Sync
+// CLOUDBEDS INTEGRATION — OAuth & Reservation Sync
 // TVC Villa Management System
 // ═══════════════════════════════════════════════════════════════
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
-// ═══════════════════════════════════════════════════════════════
-// CONFIGURATION
-// ═══════════════════════════════════════════════════════════════
-
-const CLOUDBEDS_CONFIG = {
-  authorizationUrl: "https://api.cloudbeds.com/auth/oauth/authorize",
-  tokenUrl: "https://api.cloudbeds.com/auth/oauth/token",
-  apiBase: "https://api.cloudbeds.com/api/v1.2",
-  clientId: process.env.CLOUDBEDS_CLIENT_ID!,
-  clientSecret: process.env.CLOUDBEDS_CLIENT_SECRET!,
-  redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/cloudbeds/callback`,
-  scopes: ["read:reservation", "read:guest", "read:room"],
-};
-
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
 // TYPES
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
 
-export interface CloudbedsTokens {
+interface CloudbedsTokens {
   access_token: string;
   refresh_token: string;
-  expires_at: number; // Unix timestamp
+  expires_in: number;
   token_type: string;
   scope?: string;
+  property_id?: string;
 }
 
-export interface CloudbedsReservation {
+interface CloudbedsReservation {
   reservationID: string;
   propertyID: string;
-  status:
-    | "not_confirmed"
-    | "confirmed"
-    | "canceled"
-    | "checked_in"
-    | "checked_out"
-    | "no_show";
+  status: string;
   guestFirstName: string;
   guestLastName: string;
-  guestEmail?: string;
+  guestEmail: string;
   guestPhone?: string;
-  checkInDate: string;
-  checkOutDate: string;
+  startDate: string;
+  endDate: string;
+  roomTypeName: string;
+  roomName: string;
   adults: number;
   children: number;
-  roomTypeName?: string;
-  roomName?: string;
   total: number;
   balance: number;
+  notes?: string;
   source?: string;
-  dateCreated: string;
-  dateModified: string;
+  created?: string;
+  modified?: string;
 }
 
-export interface CloudbedsRoom {
-  roomID: string;
-  roomName: string;
-  roomTypeName: string;
-  roomTypeID: string;
-  maxGuests: number;
-}
+// Villa name mapping from Cloudbeds room names to TVC villa IDs
+const VILLA_MAPPING: Record<string, string> = {
+  "Villa 1": "villa_1",
+  "Villa 2": "villa_2",
+  "Villa 3": "villa_3",
+  "Villa 4": "villa_4",
+  "Villa 5": "villa_5",
+  "Villa 6": "villa_6",
+  "Villa 7": "villa_7",
+  "Villa 8": "villa_8",
+  "Villa 9": "villa_9",
+  "Villa 10": "villa_10",
+  "Villa 11": "villa_11",
+  Casa: "casa",
+};
 
-// ═══════════════════════════════════════════════════════════════
-// OAUTH FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
+// SERVICE ROLE CLIENT
+// ─────────────────────────────────────────────────────────────────
 
-/**
- * Generate the OAuth authorization URL
- */
-export function getAuthorizationUrl(state?: string): string {
-  const params = new URLSearchParams({
-    client_id: CLOUDBEDS_CONFIG.clientId,
-    redirect_uri: CLOUDBEDS_CONFIG.redirectUri,
-    response_type: "code",
-    scope: CLOUDBEDS_CONFIG.scopes.join(" "),
-  });
+function getServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (state) {
-    params.append("state", state);
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing Supabase credentials for service client");
   }
 
-  return `${CLOUDBEDS_CONFIG.authorizationUrl}?${params.toString()}`;
+  return createClient<Database>(supabaseUrl, serviceRoleKey);
 }
 
-/**
- * Exchange authorization code for tokens
- */
-export async function exchangeCodeForTokens(
-  code: string,
-): Promise<CloudbedsTokens> {
-  const response = await fetch(CLOUDBEDS_CONFIG.tokenUrl, {
+// ─────────────────────────────────────────────────────────────────
+// OAUTH CONFIGURATION
+// ─────────────────────────────────────────────────────────────────
+
+const CLOUDBEDS_API_BASE = "https://api.cloudbeds.com";
+const CLOUDBEDS_AUTH_URL = "https://hotels.cloudbeds.com/api/v1.1/oauth";
+
+function getClientId(): string {
+  const clientId = process.env.CLOUDBEDS_CLIENT_ID;
+  if (!clientId) throw new Error("CLOUDBEDS_CLIENT_ID not configured");
+  return clientId;
+}
+
+function getClientSecret(): string {
+  const clientSecret = process.env.CLOUDBEDS_CLIENT_SECRET;
+  if (!clientSecret) throw new Error("CLOUDBEDS_CLIENT_SECRET not configured");
+  return clientSecret;
+}
+
+function getRedirectUri(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://villa-tvc.vercel.app";
+  return `${appUrl}/api/cloudbeds/callback`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AUTHORIZATION URL
+// ─────────────────────────────────────────────────────────────────
+
+export function getAuthorizationUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: getClientId(),
+    redirect_uri: getRedirectUri(),
+    response_type: "code",
+    scope: "read:reservation write:reservation read:room read:guest",
+    state,
+  });
+
+  return `${CLOUDBEDS_AUTH_URL}?${params.toString()}`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TOKEN EXCHANGE
+// ─────────────────────────────────────────────────────────────────
+
+export async function exchangeCodeForTokens(code: string): Promise<CloudbedsTokens> {
+  const response = await fetch(`${CLOUDBEDS_API_BASE}/api/v1.2/access_token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
       grant_type: "authorization_code",
-      client_id: CLOUDBEDS_CONFIG.clientId,
-      client_secret: CLOUDBEDS_CONFIG.clientSecret,
-      redirect_uri: CLOUDBEDS_CONFIG.redirectUri,
+      client_id: getClientId(),
+      client_secret: getClientSecret(),
+      redirect_uri: getRedirectUri(),
       code,
     }),
   });
@@ -114,32 +137,23 @@ export async function exchangeCodeForTokens(
     throw new Error(`Token exchange failed: ${response.status}`);
   }
 
-  const data = await response.json();
-
-  return {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: Date.now() + data.expires_in * 1000,
-    token_type: data.token_type,
-    scope: data.scope,
-  };
+  return response.json();
 }
 
-/**
- * Refresh expired access token
- */
-export async function refreshAccessToken(
-  refreshToken: string,
-): Promise<CloudbedsTokens> {
-  const response = await fetch(CLOUDBEDS_CONFIG.tokenUrl, {
+// ─────────────────────────────────────────────────────────────────
+// TOKEN REFRESH
+// ─────────────────────────────────────────────────────────────────
+
+export async function refreshAccessToken(refreshToken: string): Promise<CloudbedsTokens> {
+  const response = await fetch(`${CLOUDBEDS_API_BASE}/api/v1.2/access_token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      client_id: CLOUDBEDS_CONFIG.clientId,
-      client_secret: CLOUDBEDS_CONFIG.clientSecret,
+      client_id: getClientId(),
+      client_secret: getClientSecret(),
       refresh_token: refreshToken,
     }),
   });
@@ -150,286 +164,259 @@ export async function refreshAccessToken(
     throw new Error(`Token refresh failed: ${response.status}`);
   }
 
-  const data = await response.json();
-
-  return {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token || refreshToken,
-    expires_at: Date.now() + data.expires_in * 1000,
-    token_type: data.token_type,
-    scope: data.scope,
-  };
+  return response.json();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TOKEN STORAGE (Supabase)
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
+// TOKEN STORAGE
+// ─────────────────────────────────────────────────────────────────
 
-/**
- * Store tokens in Supabase
- */
 export async function storeTokens(tokens: CloudbedsTokens): Promise<void> {
-  const supabase = await createServerClient();
+  const supabase = getServiceClient();
+  const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
   const { error } = await supabase.from("integrations").upsert(
     {
       provider: "cloudbeds",
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
-      expires_at: new Date(tokens.expires_at).toISOString(),
+      expires_at: expiresAt.toISOString(),
       token_type: tokens.token_type,
       scope: tokens.scope,
-      updated_at: new Date().toISOString(),
+      property_id: tokens.property_id,
+      metadata: {},
     },
-    { onConflict: "provider" },
+    { onConflict: "provider" }
   );
 
   if (error) {
     console.error("[Cloudbeds] Failed to store tokens:", error);
-    throw new Error("Failed to store tokens");
+    throw new Error("Failed to store Cloudbeds tokens");
   }
+
+  console.log("[Cloudbeds] Tokens stored successfully, expires:", expiresAt);
 }
 
-/**
- * Get valid access token (refresh if needed)
- */
-export async function getValidAccessToken(): Promise<string> {
-  const supabase = await createServerClient();
+// ─────────────────────────────────────────────────────────────────
+// GET VALID ACCESS TOKEN
+// ─────────────────────────────────────────────────────────────────
 
-  const { data, error } = await supabase
+async function getValidAccessToken(): Promise<string> {
+  const supabase = getServiceClient();
+
+  const { data: integration, error } = await supabase
     .from("integrations")
     .select("*")
     .eq("provider", "cloudbeds")
     .single();
 
-  if (error || !data) {
-    throw new Error("Cloudbeds not connected. Please authorize first.");
+  if (error || !integration) {
+    throw new Error("Cloudbeds not connected");
   }
 
   // Check if token is expired (with 5 minute buffer)
-  const expiresAt = new Date(data.expires_at).getTime();
-  const isExpired = Date.now() > expiresAt - 5 * 60 * 1000;
+  const expiresAt = new Date(integration.expires_at as string);
+  const now = new Date();
+  const bufferMs = 5 * 60 * 1000;
 
-  if (isExpired) {
-    console.log("[Cloudbeds] Token expired, refreshing...");
-    const newTokens = await refreshAccessToken(data.refresh_token);
+  if (expiresAt.getTime() - bufferMs <= now.getTime()) {
+    console.log("[Cloudbeds] Token expired or expiring soon, refreshing...");
+
+    if (!integration.refresh_token) {
+      throw new Error("No refresh token available");
+    }
+
+    const newTokens = await refreshAccessToken(integration.refresh_token);
     await storeTokens(newTokens);
     return newTokens.access_token;
   }
 
-  return data.access_token;
+  return integration.access_token;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// API FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
+// CONNECTION CHECK
+// ─────────────────────────────────────────────────────────────────
 
-/**
- * Make authenticated API request
- */
-async function apiRequest<T>(
+export async function isConnected(): Promise<boolean> {
+  try {
+    const supabase = getServiceClient();
+    const { data, error } = await supabase
+      .from("integrations")
+      .select("id, expires_at")
+      .eq("provider", "cloudbeds")
+      .single();
+
+    if (error || !data) return false;
+
+    // Also check if we can get a valid token
+    await getValidAccessToken();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// API CALL HELPER
+// ─────────────────────────────────────────────────────────────────
+
+async function cloudbedsApi<T>(
   endpoint: string,
-  params?: Record<string, string>,
+  options: RequestInit = {}
 ): Promise<T> {
   const accessToken = await getValidAccessToken();
 
-  const url = new URL(`${CLOUDBEDS_CONFIG.apiBase}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-  }
-
-  const response = await fetch(url.toString(), {
+  const response = await fetch(`${CLOUDBEDS_API_BASE}${endpoint}`, {
+    ...options,
     headers: {
+      ...options.headers,
       Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
     const error = await response.text();
     console.error(`[Cloudbeds] API error ${endpoint}:`, error);
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(`Cloudbeds API error: ${response.status}`);
   }
 
   const data = await response.json();
   return data;
 }
 
-/**
- * Get reservations from Cloudbeds
- */
-export async function getReservations(options?: {
-  checkInFrom?: string;
-  checkInTo?: string;
-  status?: string;
-  modifiedFrom?: string;
-}): Promise<CloudbedsReservation[]> {
-  const params: Record<string, string> = {};
+// ─────────────────────────────────────────────────────────────────
+// SYNC RESERVATIONS
+// ─────────────────────────────────────────────────────────────────
 
-  if (options?.checkInFrom) params.checkInFrom = options.checkInFrom;
-  if (options?.checkInTo) params.checkInTo = options.checkInTo;
-  if (options?.status) params.status = options.status;
-  if (options?.modifiedFrom) params.modifiedFrom = options.modifiedFrom;
-
-  const response = await apiRequest<{ data: CloudbedsReservation[] }>(
-    "/getReservations",
-    params,
-  );
-  return response.data || [];
-}
-
-/**
- * Get rooms from Cloudbeds
- */
-export async function getRooms(): Promise<CloudbedsRoom[]> {
-  const response = await apiRequest<{ data: CloudbedsRoom[] }>("/getRooms");
-  return response.data || [];
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SYNC FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-
-// Villa mapping: Cloudbeds room names to TVC villa IDs
-const ROOM_TO_VILLA_MAP: Record<string, string> = {
-  Teresa: "villa_1",
-  Aduana: "villa_2",
-  Trinidad: "villa_3",
-  Paz: "villa_4",
-  "San Pedro": "villa_5",
-  "San Diego": "villa_6",
-  Coche: "villa_7",
-  Pozo: "villa_8",
-  "Santo Domingo": "villa_9",
-  Merced: "villa_10",
-};
-
-/**
- * Sync reservations from Cloudbeds to TVC
- */
-export async function syncReservations(): Promise<{
+interface SyncResult {
   synced: number;
   created: number;
   updated: number;
-  errors: string[];
-}> {
-  const supabase = await createServerClient();
-  const errors: string[] = [];
-  let created = 0;
-  let updated = 0;
+  errors: number;
+}
+
+export async function syncReservations(): Promise<SyncResult> {
+  const supabase = getServiceClient();
+  const result: SyncResult = { synced: 0, created: 0, updated: 0, errors: 0 };
 
   try {
-    // Get reservations from last 30 days + next 90 days
-    const today = new Date();
-    const checkInFrom = new Date(today);
-    checkInFrom.setDate(checkInFrom.getDate() - 30);
-    const checkInTo = new Date(today);
-    checkInTo.setDate(checkInTo.getDate() + 90);
+    // Get reservations for next 60 days
+    const startDate = new Date().toISOString().split("T")[0];
+    const endDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
 
-    const reservations = await getReservations({
-      checkInFrom: checkInFrom.toISOString().split("T")[0],
-      checkInTo: checkInTo.toISOString().split("T")[0],
-    });
+    console.log(`[Cloudbeds] Fetching reservations from ${startDate} to ${endDate}`);
 
-    console.log(
-      `[Cloudbeds] Found ${reservations.length} reservations to sync`,
+    const data = await cloudbedsApi<{ data: CloudbedsReservation[] }>(
+      `/api/v1.2/getReservations?startDate=${startDate}&endDate=${endDate}&status=confirmed,checked_in,checked_out`
     );
+
+    const reservations = data.data || [];
+    console.log(`[Cloudbeds] Found ${reservations.length} reservations`);
 
     for (const res of reservations) {
       try {
-        // Map room to villa
-        const villaId = ROOM_TO_VILLA_MAP[res.roomName || ""] || null;
+        // Map room name to villa ID
+        const villaId = VILLA_MAPPING[res.roomName] || VILLA_MAPPING[res.roomTypeName];
 
         if (!villaId) {
-          console.warn(`[Cloudbeds] Unknown room: ${res.roomName}`);
+          console.warn(`[Cloudbeds] Unknown room: ${res.roomName} / ${res.roomTypeName}`);
+          result.errors++;
+          continue;
         }
 
-        // Map status
-        let tvcStatus: "confirmed" | "checked_in" | "completed" | "cancelled" =
-          "confirmed";
-        if (res.status === "checked_in") tvcStatus = "checked_in";
-        else if (res.status === "checked_out") tvcStatus = "completed";
-        else if (res.status === "canceled" || res.status === "no_show")
-          tvcStatus = "cancelled";
+        // Map Cloudbeds status to TVC status
+        let status: "confirmed" | "checked_in" | "checked_out" | "cancelled" = "confirmed";
+        if (res.status === "checked_in") status = "checked_in";
+        else if (res.status === "checked_out") status = "checked_out";
+        else if (res.status === "cancelled" || res.status === "no_show") status = "cancelled";
 
-        // Upsert to villa_bookings
+        // Check if booking already exists
+        const { data: existing } = await supabase
+          .from("villa_bookings")
+          .select("id, cloudbeds_reservation_id")
+          .eq("cloudbeds_reservation_id", res.reservationID)
+          .single();
+
         const bookingData = {
-          cloudbeds_reservation_id: res.reservationID,
           villa_id: villaId,
           guest_name: `${res.guestFirstName} ${res.guestLastName}`.trim(),
           guest_email: res.guestEmail || null,
           guest_phone: res.guestPhone || null,
-          check_in: res.checkInDate,
-          check_out: res.checkOutDate,
-          num_adults: res.adults || 1,
-          num_children: res.children || 0,
-          status: tvcStatus,
-          total_amount: res.total || null,
+          check_in: res.startDate,
+          check_out: res.endDate,
+          status,
+          adults: res.adults,
+          children: res.children,
+          total_amount: res.total,
+          balance_due: res.balance,
           source: res.source || "cloudbeds",
+          notes: res.notes || null,
+          cloudbeds_reservation_id: res.reservationID,
           cloudbeds_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         };
 
-        // Check if exists
-        const { data: existing } = await supabase
-          .from("villa_bookings")
-          .select("id")
-          .eq("cloudbeds_reservation_id", res.reservationID)
-          .single();
-
         if (existing) {
-          // Update
-          const { error } = await supabase
+          // Update existing booking
+          const { error: updateError } = await supabase
             .from("villa_bookings")
             .update(bookingData)
-            .eq("cloudbeds_reservation_id", res.reservationID);
+            .eq("id", existing.id);
 
-          if (error) throw error;
-          updated++;
+          if (updateError) {
+            console.error(`[Cloudbeds] Update error for ${res.reservationID}:`, updateError);
+            result.errors++;
+          } else {
+            result.updated++;
+          }
         } else {
-          // Create
-          const { error } = await supabase.from("villa_bookings").insert({
-            ...bookingData,
-            created_at: new Date().toISOString(),
-          });
+          // Create new booking
+          const { error: insertError } = await supabase
+            .from("villa_bookings")
+            .insert(bookingData);
 
-          if (error) throw error;
-          created++;
+          if (insertError) {
+            console.error(`[Cloudbeds] Insert error for ${res.reservationID}:`, insertError);
+            result.errors++;
+          } else {
+            result.created++;
+          }
         }
-      } catch (err) {
-        const msg = `Failed to sync reservation ${res.reservationID}: ${err}`;
-        console.error(`[Cloudbeds] ${msg}`);
-        errors.push(msg);
+
+        result.synced++;
+      } catch (resError) {
+        console.error(`[Cloudbeds] Error processing reservation ${res.reservationID}:`, resError);
+        result.errors++;
       }
     }
 
-    return {
-      synced: reservations.length,
-      created,
-      updated,
-      errors,
-    };
-  } catch (err) {
-    console.error("[Cloudbeds] Sync failed:", err);
-    throw err;
+    console.log("[Cloudbeds] Sync complete:", result);
+    return result;
+  } catch (error) {
+    console.error("[Cloudbeds] Sync failed:", error);
+    throw error;
   }
 }
 
-/**
- * Check if Cloudbeds is connected
- */
-export async function isConnected(): Promise<boolean> {
-  try {
-    const supabase = await createServerClient();
-    const { data } = await supabase
-      .from("integrations")
-      .select("id")
-      .eq("provider", "cloudbeds")
-      .single();
-    return !!data;
-  } catch {
-    return false;
+// ─────────────────────────────────────────────────────────────────
+// DISCONNECT
+// ─────────────────────────────────────────────────────────────────
+
+export async function disconnect(): Promise<void> {
+  const supabase = getServiceClient();
+
+  const { error } = await supabase
+    .from("integrations")
+    .delete()
+    .eq("provider", "cloudbeds");
+
+  if (error) {
+    console.error("[Cloudbeds] Disconnect error:", error);
+    throw new Error("Failed to disconnect Cloudbeds");
   }
+
+  console.log("[Cloudbeds] Disconnected successfully");
 }

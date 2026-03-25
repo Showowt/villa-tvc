@@ -4,24 +4,36 @@ import { createServerClient } from "@/lib/supabase/client";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseAny = any;
 
+// ═══════════════════════════════════════════════════════════════
+// BOOKING CANCELLATION API - Issues #45 & #46
+// Enhanced with refund calculation and tracking
+// Politica: 30+ dias = 100%, 15-29 dias = 50%, <15 dias = 0%
+// ═══════════════════════════════════════════════════════════════
+
+interface CancelRequest {
+  booking_id: string;
+  cancellation_reason: string;
+  cancelled_by: string;
+  refund_amount?: number;
+  refund_percentage?: number;
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as CancelRequest;
     const {
       booking_id,
       cancellation_reason,
       cancelled_by,
-    }: {
-      booking_id: string;
-      cancellation_reason: string;
-      cancelled_by: string;
+      refund_amount,
+      refund_percentage,
     } = body;
 
     if (!booking_id || !cancellation_reason || !cancelled_by) {
       return NextResponse.json(
         {
           error:
-            "Missing required fields: booking_id, cancellation_reason, cancelled_by",
+            "Campos requeridos: booking_id, cancellation_reason, cancelled_by",
         },
         { status: 400 },
       );
@@ -67,7 +79,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Log the cancellation for audit
+    // Calculate refund based on policy if not provided
+    let finalRefundAmount = refund_amount;
+    let finalRefundPercentage = refund_percentage;
+    let daysUntilCheckin = 0;
+
+    if (booking.deposit_paid && booking.deposit_amount) {
+      const checkInDate = new Date(booking.check_in);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      checkInDate.setHours(0, 0, 0, 0);
+
+      daysUntilCheckin = Math.ceil(
+        (checkInDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      // Apply refund policy if not provided
+      if (finalRefundPercentage === undefined) {
+        if (daysUntilCheckin >= 30) {
+          finalRefundPercentage = 100;
+        } else if (daysUntilCheckin >= 15) {
+          finalRefundPercentage = 50;
+        } else {
+          finalRefundPercentage = 0;
+        }
+      }
+
+      if (finalRefundAmount === undefined) {
+        finalRefundAmount =
+          Math.round(
+            ((booking.deposit_amount * (finalRefundPercentage || 0)) / 100) *
+              100,
+          ) / 100;
+      }
+    }
+
+    // Log the cancellation for audit with refund info
     await supabase.from("booking_cancellations").insert({
       booking_id,
       villa_id: booking.villa_id,
@@ -77,6 +124,10 @@ export async function POST(request: Request) {
       cancelled_by,
       cancellation_reason,
       num_nights: numNights,
+      deposit_amount: booking.deposit_amount || 0,
+      days_until_checkin: daysUntilCheckin,
+      refund_amount: finalRefundAmount || 0,
+      refund_percentage: finalRefundPercentage || 0,
     });
 
     // Update villa status to vacant (free for rebooking)
@@ -140,10 +191,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Booking cancelled. Villa ${booking.villa_id} is now available for rebooking.`,
+      message: `Reserva cancelada. Villa ${booking.villa_id} esta disponible para nueva reserva.`,
       booking_id,
       villa_id: booking.villa_id,
       cancelled_nights: numNights,
+      refund_amount: finalRefundAmount || 0,
+      refund_percentage: finalRefundPercentage || 0,
+      days_until_checkin: daysUntilCheckin,
     });
   } catch (error) {
     console.error("[cancel booking]", error);

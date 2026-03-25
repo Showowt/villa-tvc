@@ -34,7 +34,22 @@ interface WeatherDay {
   excursion_warning: string | null;
 }
 
-const FEATURES = [
+interface Feature {
+  icon: string;
+  title: string;
+  desc: string;
+  href: string;
+  isNew?: boolean;
+}
+
+const FEATURES: Feature[] = [
+  {
+    icon: "👤",
+    title: "Perfiles de Huéspedes",
+    desc: "Huéspedes recurrentes + ocasiones especiales",
+    href: "/ops/guest-profiles",
+    isNew: true,
+  },
   {
     icon: "📅",
     title: "Daily Occupancy Engine",
@@ -397,6 +412,26 @@ export default function OpsOverviewPage() {
               : "#6B7280"
           }
           icon="⭐"
+        />
+        <StatCard
+          label="Desperdicio Hoy"
+          value={`-$${Math.round(stats.dailyWasteCost / 1000)}K`}
+          sub={
+            stats.wasteByReason.length > 0
+              ? stats.wasteByReason
+                  .sort((a, b) => b.cost - a.cost)[0]
+                  .reason.replace("_", " ")
+              : "Sin registros"
+          }
+          color="#DC2626"
+          icon="🗑️"
+        />
+        <StatCard
+          label="Comidas Staff Hoy"
+          value={`$${Math.round(stats.dailyStaffMealCost / 1000)}K`}
+          sub="Costo estimado"
+          color="#F97316"
+          icon="🍽️"
         />
       </div>
 
