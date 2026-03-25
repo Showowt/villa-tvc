@@ -155,6 +155,11 @@ const translations: Record<string, Record<Language, string>> = {
   "inv.items_low": { en: "items below minimum", es: "items bajo mínimo" },
   "inv.minimum": { en: "Minimum", es: "Mínimo" },
   "inv.current": { en: "Current", es: "Actual" },
+  "inv.category.paper": { en: "Paper & Accessories", es: "Papel y Accesorios" },
+  "inv.category.amenities": {
+    en: "Villa Amenities",
+    es: "Amenidades de Villa",
+  },
   "inv.category.bathroom": {
     en: "Bathroom / Amenities",
     es: "Baño / Amenidades",
