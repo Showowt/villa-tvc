@@ -45,10 +45,21 @@ interface VillaStatus {
   vipLevel?: "standard" | "vip" | "vvip";
 }
 
+// ═══════════════════════════════════════════════════════════════
+// VILLA COLORS — Exact match to D. Arqui Restauro S.A.S Blueprint
+// ═══════════════════════════════════════════════════════════════
+const VILLA_COLORS = {
+  yellow: "#FACC15", // Teresa, Aduana — Yellow labels
+  red: "#DC2626", // Trinidad — Red label
+  pink: "#EC4899", // Paz, San Pedro, Coche — Pink/Magenta labels
+  gray: "#6B7280", // San Diego — No color on blueprint (plain text)
+  blue: "#2563EB", // Pozo, Santo Domingo, Merced — Blue labels
+};
+
 // Villa data from architectural plans — exact positions from blueprint
 // Positions based on D. Arqui Restauro S.A.S layout (viewBox 0 0 100 80)
 const VILLAS: Villa[] = [
-  // Top row near dock (north)
+  // ════ NORTH ROW (Near Dock/Muelle) ════
   {
     id: 1,
     dbId: "villa_1",
@@ -57,7 +68,7 @@ const VILLAS: Villa[] = [
     x: 28,
     y: 16,
     angle: -25,
-    labelColor: "#F59E0B", // Yellow/Orange
+    labelColor: VILLA_COLORS.yellow,
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -71,7 +82,7 @@ const VILLAS: Villa[] = [
     x: 42,
     y: 14,
     angle: -10,
-    labelColor: "#F97316", // Orange
+    labelColor: VILLA_COLORS.yellow,
     beds: 2,
     sofa: true,
     maxGuests: 5,
@@ -85,13 +96,13 @@ const VILLAS: Villa[] = [
     x: 56,
     y: 13,
     angle: 0,
-    labelColor: "#EF4444", // Red
+    labelColor: VILLA_COLORS.red,
     beds: 2,
     sofa: true,
     maxGuests: 5,
     zone: "north",
   },
-  // East side (right)
+  // ════ EAST SIDE (Right) ════
   {
     id: 4,
     dbId: "villa_4",
@@ -100,7 +111,7 @@ const VILLAS: Villa[] = [
     x: 78,
     y: 20,
     angle: 15,
-    labelColor: "#EC4899", // Pink
+    labelColor: VILLA_COLORS.pink,
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -114,7 +125,7 @@ const VILLAS: Villa[] = [
     x: 82,
     y: 32,
     angle: 20,
-    labelColor: "#EC4899", // Pink
+    labelColor: VILLA_COLORS.pink,
     beds: 2,
     sofa: true,
     maxGuests: 5,
@@ -128,12 +139,13 @@ const VILLAS: Villa[] = [
     x: 80,
     y: 46,
     angle: 10,
-    labelColor: "#A855F7", // Purple
+    labelColor: VILLA_COLORS.gray,
     beds: 2,
     sofa: false,
     maxGuests: 4,
     zone: "east",
   },
+  // ════ SOUTH SIDE ════
   {
     id: 7,
     dbId: "villa_7",
@@ -142,14 +154,14 @@ const VILLAS: Villa[] = [
     x: 76,
     y: 60,
     angle: 0,
-    labelColor: "#EC4899", // Pink
+    labelColor: VILLA_COLORS.pink,
     beds: 2,
     sofa: false,
     maxGuests: 4,
     zone: "south",
     ada: true, // Accesibilidad reducida
   },
-  // West side (left)
+  // ════ WEST SIDE (Left) ════
   {
     id: 8,
     dbId: "villa_8",
@@ -158,7 +170,7 @@ const VILLAS: Villa[] = [
     x: 22,
     y: 34,
     angle: -15,
-    labelColor: "#3B82F6", // Blue
+    labelColor: VILLA_COLORS.blue,
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -172,7 +184,7 @@ const VILLAS: Villa[] = [
     x: 28,
     y: 50,
     angle: -5,
-    labelColor: "#3B82F6", // Blue
+    labelColor: VILLA_COLORS.blue,
     beds: 2,
     sofa: true,
     maxGuests: 5,
@@ -186,7 +198,7 @@ const VILLAS: Villa[] = [
     x: 24,
     y: 66,
     angle: 0,
-    labelColor: "#3B82F6", // Blue
+    labelColor: VILLA_COLORS.blue,
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -461,11 +473,33 @@ export default function TVCPropertyMap() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .villa-marker { cursor: pointer; }
-        .villa-marker:hover .villa-bg { filter: brightness(1.1); }
-        .villa-marker:hover .villa-label { font-weight: 900; }
+
+        /* Villa marker interactions - NO transform/scale to prevent glitches */
+        .villa-marker {
+          cursor: pointer;
+          outline: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .villa-marker:hover .villa-bg {
+          filter: brightness(1.08);
+          stroke-width: 0.5;
+        }
+        .villa-marker:hover .villa-label-bg {
+          filter: brightness(1.1);
+        }
+        .villa-marker:active .villa-bg {
+          filter: brightness(0.95);
+        }
+        .villa-marker:focus {
+          outline: none;
+        }
+
+        /* Smooth transitions without layout shifts */
+        .villa-bg, .villa-label-bg {
+          transition: filter 0.15s ease-out, stroke-width 0.15s ease-out;
+          will-change: filter;
+        }
       `}</style>
 
       {/* Header */}
@@ -1173,6 +1207,7 @@ export default function TVCPropertyMap() {
 
                   {/* Villa name label background */}
                   <rect
+                    className="villa-label-bg"
                     x={villa.x - 5.5}
                     y={villa.y + 2.5}
                     width="11"
@@ -1181,7 +1216,6 @@ export default function TVCPropertyMap() {
                     fill={villa.labelColor}
                     stroke={villa.labelColor}
                     strokeWidth="0.1"
-                    opacity="0.95"
                   />
 
                   {/* Villa name */}
@@ -1319,29 +1353,88 @@ export default function TVCPropertyMap() {
             </g>
           </svg>
 
-          {/* Legend overlay */}
+          {/* Villa Color Legend */}
           <div
             style={{
               position: "absolute",
               bottom: 12,
               left: 12,
-              background: "rgba(255,255,255,0.95)",
+              background: "rgba(255,255,255,0.97)",
               borderRadius: 10,
-              padding: "10px 14px",
+              padding: "12px 16px",
               border: "1px solid #E2E8F0",
               backdropFilter: "blur(8px)",
               fontSize: 10,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
             }}
           >
             <div
               style={{
                 fontWeight: 800,
                 color: "#0A0A0F",
-                marginBottom: 6,
+                marginBottom: 10,
                 fontSize: 11,
+                borderBottom: "1px solid #E2E8F0",
+                paddingBottom: 6,
               }}
             >
-              ESTADO VILLAS
+              VILLAS POR COLOR
+            </div>
+            {[
+              {
+                color: VILLA_COLORS.yellow,
+                villas: "Teresa, Aduana",
+                label: "Amarillo",
+              },
+              { color: VILLA_COLORS.red, villas: "Trinidad", label: "Rojo" },
+              {
+                color: VILLA_COLORS.pink,
+                villas: "Paz, San Pedro, Coche",
+                label: "Rosa",
+              },
+              {
+                color: VILLA_COLORS.blue,
+                villas: "Pozo, Santo Domingo, Merced",
+                label: "Azul",
+              },
+              { color: VILLA_COLORS.gray, villas: "San Diego", label: "Gris" },
+            ].map((group) => (
+              <div
+                key={group.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 5,
+                }}
+              >
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    background: group.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: "#333", fontWeight: 600, fontSize: 10 }}>
+                  {group.villas}
+                </span>
+              </div>
+            ))}
+
+            <div
+              style={{
+                fontWeight: 800,
+                color: "#0A0A0F",
+                marginTop: 12,
+                marginBottom: 8,
+                fontSize: 11,
+                borderTop: "1px solid #E2E8F0",
+                paddingTop: 10,
+              }}
+            >
+              ESTADO OCUPACIÓN
             </div>
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
               <div
@@ -1359,6 +1452,7 @@ export default function TVCPropertyMap() {
                     height: 8,
                     borderRadius: "50%",
                     background: cfg.color,
+                    border: "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
                 <span style={{ color: "#333", fontWeight: 600 }}>
