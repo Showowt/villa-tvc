@@ -133,10 +133,6 @@ if (
 // ─────────────────────────────────────────────────────────────────
 
 const nextConfig: NextConfig = {
-  // DISABLE TURBOPACK - Use stable webpack for production builds
-  // Turbopack was hanging during "Creating optimized production build"
-  turbo: false,
-
   // TEMPORARY: Skip TypeScript errors during build (schema mismatch)
   // TODO: Regenerate types and fix all type errors, then remove this
   typescript: {
