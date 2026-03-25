@@ -43,13 +43,28 @@ export async function GET() {
 
     const data = await response.json();
 
-    // Extract unique room names
+    // Need to fetch each reservation's detail to get room info
     const roomNames = new Set<string>();
     const reservations = data.data || [];
 
-    for (const res of reservations) {
-      if (res.roomName) roomNames.add(res.roomName);
-      if (res.roomTypeName) roomNames.add(`TYPE: ${res.roomTypeName}`);
+    // Get detail for ALL reservations to collect room names
+    for (const res of reservations.slice(0, 20)) {
+      // Sample first 20
+      try {
+        const detailRes = await fetch(
+          `${CLOUDBEDS_API_BASE}/api/v1.2/getReservation?reservationID=${res.reservationID}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        const detail = await detailRes.json();
+        if (detail.data?.assigned) {
+          for (const room of detail.data.assigned) {
+            if (room.roomName) roomNames.add(room.roomName);
+            if (room.roomTypeName) roomNames.add(`TYPE: ${room.roomTypeName}`);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to get detail for", res.reservationID);
+      }
     }
 
     // Get full details for first reservation to see structure
