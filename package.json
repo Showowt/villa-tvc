@@ -23,7 +23,9 @@
     "puppeteer-core": "^24.39.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "swr": "^2.4.1",
     "twilio": "^5.4.3",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
