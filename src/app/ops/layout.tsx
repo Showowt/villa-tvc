@@ -3,47 +3,89 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ops/Badge";
+import { LanguageProvider, useLanguage } from "@/lib/i18n/context";
 
 const NAV_ITEMS = [
-  { key: "overview", label: "Overview", href: "/ops", icon: "📊" },
+  { key: "overview", labelKey: "nav.overview", href: "/ops", icon: "📊" },
+  { key: "demo", labelKey: "nav.demo", href: "/ops/demo", icon: "🎓" },
   {
     key: "welcome-guide",
-    label: "Welcome Guide",
+    labelKey: "nav.welcome_guide",
     href: "/ops/welcome-guide",
     icon: "📄",
   },
   {
     key: "requirements",
-    label: "Requirements",
+    labelKey: "nav.requirements",
     href: "/ops/requirements",
     icon: "📋",
   },
-  { key: "fb-pl", label: "F&B P&L", href: "/ops/fb-pl", icon: "💰" },
-  { key: "revenue", label: "Revenue", href: "/ops/revenue", icon: "🚀" },
-  { key: "occupancy", label: "Occupancy", href: "/ops/occupancy", icon: "📅" },
-  { key: "staff-bot", label: "Staff Bot", href: "/ops/staff-bot", icon: "🤖" },
+  { key: "fb-pl", labelKey: "nav.fb_pl", href: "/ops/fb-pl", icon: "💰" },
+  { key: "revenue", labelKey: "nav.revenue", href: "/ops/revenue", icon: "🚀" },
+  {
+    key: "occupancy",
+    labelKey: "nav.occupancy",
+    href: "/ops/occupancy",
+    icon: "📅",
+  },
+  {
+    key: "staff-bot",
+    labelKey: "nav.staff_bot",
+    href: "/ops/staff-bot",
+    icon: "🤖",
+  },
   {
     key: "booking-bot",
-    label: "Booking Bot",
+    labelKey: "nav.booking_bot",
     href: "/ops/booking-bot",
     icon: "🤝",
   },
   {
     key: "housekeeping",
-    label: "Housekeeping QC",
+    labelKey: "nav.housekeeping",
     href: "/ops/housekeeping",
     icon: "🧹",
   },
   {
     key: "maintenance",
-    label: "Maintenance QC",
+    labelKey: "nav.maintenance",
     href: "/ops/maintenance",
     icon: "🔧",
   },
 ];
 
-export default function OpsLayout({ children }: { children: React.ReactNode }) {
+function LanguageToggle() {
+  const { lang, setLang } = useLanguage();
+
+  return (
+    <div className="flex items-center gap-1 bg-[#1a1a2e] rounded-lg p-1">
+      <button
+        onClick={() => setLang("en")}
+        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+          lang === "en"
+            ? "bg-[#00B4FF] text-[#0A0A0F]"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        🇺🇸 EN
+      </button>
+      <button
+        onClick={() => setLang("es")}
+        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+          lang === "es"
+            ? "bg-[#00B4FF] text-[#0A0A0F]"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        🇨🇴 ES
+      </button>
+    </div>
+  );
+}
+
+function OpsLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t, lang } = useLanguage();
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -56,16 +98,17 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <div className="text-white text-base font-extrabold">
-                TVC Operations Intelligence
+                {t("header.title")}
               </div>
               <div className="text-[#00B4FF] text-[10px] font-semibold tracking-wider">
-                MACHINEMIND • v3.0 — FULL PLATFORM
+                {t("header.subtitle")}
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Badge color="#10B981">LIVE</Badge>
-            <Badge color="#00B4FF">9 MODULES</Badge>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Badge color="#10B981">{t("header.live")}</Badge>
+            <Badge color="#00B4FF">{t("header.modules")}</Badge>
           </div>
         </div>
       </header>
@@ -85,9 +128,9 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
                 isActive
                   ? "bg-[#0A0A0F] text-white"
                   : "text-slate-500 hover:bg-slate-100"
-              }`}
+              } ${item.key === "demo" ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" : ""}`}
             >
-              {item.icon} {item.label}
+              {item.icon} {t(item.labelKey)}
             </Link>
           );
         })}
@@ -98,10 +141,16 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <footer className="text-center py-4 border-t border-slate-200 bg-white mt-8">
-        <p className="text-[10px] text-slate-500">
-          MachineMind AI Infrastructure — TVC Operations Intelligence v3.0
-        </p>
+        <p className="text-[10px] text-slate-500">{t("footer.powered_by")}</p>
       </footer>
     </div>
+  );
+}
+
+export default function OpsLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <LanguageProvider>
+      <OpsLayoutContent>{children}</OpsLayoutContent>
+    </LanguageProvider>
   );
 }
