@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       console.error("[Cloudbeds] OAuth error:", error, errorDescription);
       return NextResponse.redirect(
         new URL(
-          `/ops/settings/integrations?error=${encodeURIComponent(errorDescription || error)}`,
+          `/ops?error=${encodeURIComponent(errorDescription || error)}`,
           request.url,
         ),
       );
@@ -32,10 +32,7 @@ export async function GET(request: NextRequest) {
     if (!code) {
       console.error("[Cloudbeds] No authorization code received");
       return NextResponse.redirect(
-        new URL(
-          "/ops/settings/integrations?error=No+authorization+code+received",
-          request.url,
-        ),
+        new URL("/ops?error=No+authorization+code+received", request.url),
       );
     }
 
@@ -66,16 +63,13 @@ export async function GET(request: NextRequest) {
 
     // Redirect to success page
     return NextResponse.redirect(
-      new URL(
-        "/ops/settings/integrations?success=cloudbeds_connected",
-        request.url,
-      ),
+      new URL("/ops?success=cloudbeds_connected", request.url),
     );
   } catch (error) {
     console.error("[Cloudbeds] Callback error:", error);
     return NextResponse.redirect(
       new URL(
-        `/ops/settings/integrations?error=${encodeURIComponent("Failed to complete authorization")}`,
+        `/ops?error=${encodeURIComponent("Failed to complete authorization")}`,
         request.url,
       ),
     );

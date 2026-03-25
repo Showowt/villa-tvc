@@ -43,18 +43,26 @@ interface CloudbedsReservation {
 
 // Villa name mapping from Cloudbeds room names to TVC villa IDs
 const VILLA_MAPPING: Record<string, string> = {
-  "Villa 1": "villa_1",
-  "Villa 2": "villa_2",
-  "Villa 3": "villa_3",
-  "Villa 4": "villa_4",
-  "Villa 5": "villa_5",
-  "Villa 6": "villa_6",
-  "Villa 7": "villa_7",
-  "Villa 8": "villa_8",
-  "Villa 9": "villa_9",
-  "Villa 10": "villa_10",
-  "Villa 11": "villa_11",
-  Casa: "casa",
+  // Specific room names
+  "Villa ADUANA (Azul/Blue)": "villa_aduana",
+  "Villa Coches": "villa_coches",
+  "Villa Merced (Morada/Purple)": "villa_merced",
+  "Villa PAZ (Limón/ Keylime)": "villa_paz",
+  "Villa Pozo (Azulverde/Teal)": "villa_pozo",
+  "Villa San Pedro (Magenta)": "villa_san_pedro",
+  "Villa Santo Domingo (Mint/Menta)": "villa_santo_domingo",
+  "Villa TERESA (Amarilla/Yellow)": "villa_teresa",
+  "Villa TRINIDAD (Durazno/Peach)": "villa_trinidad",
+  "FUL(1)": "full_house",
+  // Room type fallbacks (used when specific room not assigned)
+  "Deluxe Tiny Villa": "villa_unassigned",
+  "Deluxe Tiny Villa (Last Deal Breakfast & Transfers included)":
+    "villa_unassigned",
+  "Double Villa (Handicap Accesible)": "villa_unassigned",
+  "Full House": "full_house",
+  "Garden View Tiny  Villa": "villa_unassigned",
+  "Garden View Tiny  Villa (Early year deal Breakfast & Transfer included)":
+    "villa_unassigned",
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -92,7 +100,8 @@ function getClientSecret(): string {
 }
 
 function getRedirectUri(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://villa-tvc.vercel.app";
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://villa-tvc.vercel.app";
   return `${appUrl}/api/cloudbeds/callback`;
 }
 
@@ -116,7 +125,9 @@ export function getAuthorizationUrl(state: string): string {
 // TOKEN EXCHANGE
 // ─────────────────────────────────────────────────────────────────
 
-export async function exchangeCodeForTokens(code: string): Promise<CloudbedsTokens> {
+export async function exchangeCodeForTokens(
+  code: string,
+): Promise<CloudbedsTokens> {
   const response = await fetch(`${CLOUDBEDS_API_BASE}/api/v1.2/access_token`, {
     method: "POST",
     headers: {
@@ -144,7 +155,9 @@ export async function exchangeCodeForTokens(code: string): Promise<CloudbedsToke
 // TOKEN REFRESH
 // ─────────────────────────────────────────────────────────────────
 
-export async function refreshAccessToken(refreshToken: string): Promise<CloudbedsTokens> {
+export async function refreshAccessToken(
+  refreshToken: string,
+): Promise<CloudbedsTokens> {
   const response = await fetch(`${CLOUDBEDS_API_BASE}/api/v1.2/access_token`, {
     method: "POST",
     headers: {
@@ -186,7 +199,7 @@ export async function storeTokens(tokens: CloudbedsTokens): Promise<void> {
       property_id: tokens.property_id,
       metadata: {},
     },
-    { onConflict: "provider" }
+    { onConflict: "provider" },
   );
 
   if (error) {
@@ -263,7 +276,7 @@ export async function isConnected(): Promise<boolean> {
 
 async function cloudbedsApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const accessToken = await getValidAccessToken();
 
@@ -297,7 +310,7 @@ interface SyncResult {
   errors: number;
 }
 
-export async function syncReservations(): Promise<SyncResult> {
+export async function syncReservations(batchSize = 20): Promise<SyncResult> {
   const supabase = getServiceClient();
   const result: SyncResult = { synced: 0, created: 0, updated: 0, errors: 0 };
 
@@ -308,31 +321,97 @@ export async function syncReservations(): Promise<SyncResult> {
       .toISOString()
       .split("T")[0];
 
-    console.log(`[Cloudbeds] Fetching reservations from ${startDate} to ${endDate}`);
-
-    const data = await cloudbedsApi<{ data: CloudbedsReservation[] }>(
-      `/api/v1.2/getReservations?startDate=${startDate}&endDate=${endDate}&status=confirmed,checked_in,checked_out`
+    console.log(
+      `[Cloudbeds] Fetching reservations from ${startDate} to ${endDate}`,
     );
 
-    const reservations = data.data || [];
-    console.log(`[Cloudbeds] Found ${reservations.length} reservations`);
+    const data = await cloudbedsApi<{ data: CloudbedsReservation[] }>(
+      `/api/v1.2/getReservations?startDate=${startDate}&endDate=${endDate}&status=confirmed,checked_in,checked_out`,
+    );
 
-    for (const res of reservations) {
+    const allReservations = data.data || [];
+
+    // Get already synced reservation IDs from last hour to skip them
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recentlySynced } = await supabase
+      .from("villa_bookings")
+      .select("cloudbeds_reservation_id")
+      .gt("cloudbeds_synced_at", oneHourAgo);
+
+    const syncedIds = new Set(
+      (recentlySynced || []).map((r) => r.cloudbeds_reservation_id),
+    );
+
+    // Filter out recently synced and take batch
+    const unsynced = allReservations.filter(
+      (r) => !syncedIds.has(r.reservationID),
+    );
+    const reservations = unsynced.slice(0, batchSize);
+    console.log(
+      `[Cloudbeds] Found ${allReservations.length} total, ${unsynced.length} need sync, processing ${reservations.length}`,
+    );
+
+    for (let i = 0; i < reservations.length; i++) {
+      const res = reservations[i];
       try {
-        // Map room name to villa ID
-        const villaId = VILLA_MAPPING[res.roomName] || VILLA_MAPPING[res.roomTypeName];
+        // Small delay between API calls to avoid rate limiting
+        if (i > 0) await new Promise((r) => setTimeout(r, 100));
+
+        // Fetch reservation details to get room info
+        const detailData = await cloudbedsApi<{
+          data: {
+            assigned?: Array<{
+              roomName: string;
+              roomTypeName: string;
+              adults?: string;
+              children?: string;
+            }>;
+          };
+        }>(`/api/v1.2/getReservation?reservationID=${res.reservationID}`);
+
+        const assigned = detailData.data?.assigned?.[0];
+        const roomName = assigned?.roomName;
+        const roomTypeName = assigned?.roomTypeName;
+
+        // Map room name to villa ID (try room name first, then room type)
+        const villaId =
+          (roomName && VILLA_MAPPING[roomName]) ||
+          (roomTypeName && VILLA_MAPPING[roomTypeName]) ||
+          undefined;
 
         if (!villaId) {
-          console.warn(`[Cloudbeds] Unknown room: ${res.roomName} / ${res.roomTypeName}`);
+          console.warn(
+            `[Cloudbeds] Unknown room: ${roomName} / ${roomTypeName}`,
+          );
           result.errors++;
           continue;
         }
 
+        // Get guest info from detail response
+        const detail = detailData.data as Record<string, unknown>;
+        const guestList = detail.guestList as
+          | Record<
+              string,
+              {
+                guestFirstName?: string;
+                guestLastName?: string;
+                guestEmail?: string;
+                guestPhone?: string;
+              }
+            >
+          | undefined;
+        const mainGuest = guestList
+          ? Object.values(guestList).find((g) => g)
+          : undefined;
+
         // Map Cloudbeds status to TVC status
-        let status: "confirmed" | "checked_in" | "checked_out" | "cancelled" = "confirmed";
-        if (res.status === "checked_in") status = "checked_in";
-        else if (res.status === "checked_out") status = "checked_out";
-        else if (res.status === "cancelled" || res.status === "no_show") status = "cancelled";
+        let status: "confirmed" | "checked_in" | "checked_out" | "cancelled" =
+          "confirmed";
+        const detailStatus = detail.status as string;
+        if (detailStatus === "checked_in") status = "checked_in";
+        else if (detailStatus === "checked_out") status = "checked_out";
+        else if (detailStatus === "cancelled" || detailStatus === "no_show")
+          status = "cancelled";
 
         // Check if booking already exists
         const { data: existing } = await supabase
@@ -343,18 +422,23 @@ export async function syncReservations(): Promise<SyncResult> {
 
         const bookingData = {
           villa_id: villaId,
-          guest_name: `${res.guestFirstName} ${res.guestLastName}`.trim(),
-          guest_email: res.guestEmail || null,
-          guest_phone: res.guestPhone || null,
-          check_in: res.startDate,
-          check_out: res.endDate,
+          guest_name: mainGuest
+            ? `${mainGuest.guestFirstName || ""} ${mainGuest.guestLastName || ""}`.trim()
+            : (detail.guestName as string) || "Unknown",
+          guest_email:
+            mainGuest?.guestEmail && mainGuest.guestEmail !== "N/A"
+              ? mainGuest.guestEmail
+              : null,
+          guest_phone: mainGuest?.guestPhone || null,
+          check_in: (detail.startDate as string) || res.startDate,
+          check_out: (detail.endDate as string) || res.endDate,
           status,
-          adults: res.adults,
-          children: res.children,
-          total_amount: res.total,
-          balance_due: res.balance,
-          source: res.source || "cloudbeds",
-          notes: res.notes || null,
+          num_adults: parseInt(String(assigned?.adults || res.adults || 1)),
+          num_children: parseInt(
+            String(assigned?.children || res.children || 0),
+          ),
+          booking_source: (detail.source as string) || "cloudbeds",
+          notes: null,
           cloudbeds_reservation_id: res.reservationID,
           cloudbeds_synced_at: new Date().toISOString(),
         };
@@ -367,7 +451,10 @@ export async function syncReservations(): Promise<SyncResult> {
             .eq("id", existing.id);
 
           if (updateError) {
-            console.error(`[Cloudbeds] Update error for ${res.reservationID}:`, updateError);
+            console.error(
+              `[Cloudbeds] Update error for ${res.reservationID}:`,
+              updateError,
+            );
             result.errors++;
           } else {
             result.updated++;
@@ -379,7 +466,10 @@ export async function syncReservations(): Promise<SyncResult> {
             .insert(bookingData);
 
           if (insertError) {
-            console.error(`[Cloudbeds] Insert error for ${res.reservationID}:`, insertError);
+            console.error(
+              `[Cloudbeds] Insert error for ${res.reservationID}:`,
+              insertError,
+            );
             result.errors++;
           } else {
             result.created++;
@@ -388,7 +478,10 @@ export async function syncReservations(): Promise<SyncResult> {
 
         result.synced++;
       } catch (resError) {
-        console.error(`[Cloudbeds] Error processing reservation ${res.reservationID}:`, resError);
+        console.error(
+          `[Cloudbeds] Error processing reservation ${res.reservationID}:`,
+          resError,
+        );
         result.errors++;
       }
     }

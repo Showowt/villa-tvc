@@ -8,73 +8,11 @@
     "src/app/api/whatsapp/webhook/route.ts": {
       "maxDuration": 30
     },
-    "src/app/api/ops/staff-bot/route.ts": {
-      "maxDuration": 30
-    },
-    "src/app/api/cron/status-transitions/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/guest-comms/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/review-requests/route.ts": {
-      "maxDuration": 120
-    },
-    "src/app/api/analytics/consumption/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/morning-sync/route.ts": {
-      "maxDuration": 120
-    },
-    "src/app/api/cron/checkout-auto/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/cleaning-deadline/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/daily-metrics/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cron/86-restore/route.ts": {
-      "maxDuration": 30
-    },
     "src/app/api/cloudbeds/sync/route.ts": {
       "maxDuration": 60
     }
   },
   "crons": [
-    {
-      "path": "/api/cron/status-transitions",
-      "schedule": "15 11 * * *"
-    },
-    {
-      "path": "/api/cron/guest-comms",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/review-requests",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/analytics/consumption",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/morning-sync",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/checkout-auto",
-      "schedule": "15 16 * * *"
-    },
-    {
-      "path": "/api/cron/cleaning-deadline",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/daily-metrics",
-      "schedule": "5 5 * * *"
-    },
     {
       "path": "/api/cloudbeds/sync",
       "schedule": "0 */2 * * *"
