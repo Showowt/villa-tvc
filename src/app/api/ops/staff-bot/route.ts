@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createServerClient } from "@/lib/supabase/client";
+
+// Direct fetch to Anthropic API instead of SDK (SDK has issues on Vercel edge)
+async function callClaude(
+  systemPrompt: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<string> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY!,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 500,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.content[0]?.text || "Lo siento, no pude generar una respuesta.";
+}
 
 const SYSTEM_PROMPT_BASE = `Eres el asistente de operaciones back-of-house para TVC (Tiny Village Cartagena), un resort de tiny houses de lujo en la isla Tierra Bomba, Colombia.
 
@@ -59,10 +87,6 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
 
   try {
     const { message, history } = await request.json();
@@ -184,17 +208,8 @@ export async function POST(request: NextRequest) {
       content: message,
     });
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 500,
-      system: systemPrompt,
-      messages,
-    });
-
-    const responseText =
-      response.content[0].type === "text"
-        ? response.content[0].text
-        : "Lo siento, tuve un problema. Por favor contacta a Akil: +57 316 055 1387";
+    // Call Claude via direct fetch (SDK has issues on Vercel)
+    const responseText = await callClaude(systemPrompt, messages);
 
     // Log conversation to database
     try {
