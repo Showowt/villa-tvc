@@ -513,18 +513,19 @@ export default function TVCPropertyMap() {
         .lte("check_in", today)
         .gte("check_out", today);
 
-      // Map DB villa IDs to our component IDs
+      // Map Cloudbeds villa IDs to our component IDs
       const dbIdToId: { [key: string]: string } = {
-        villa_1: "teresa",
-        villa_2: "aduana",
-        villa_3: "trinidad",
-        villa_4: "paz",
-        villa_5: "sanpedro",
-        villa_6: "sandiego",
-        villa_7: "coche",
-        villa_8: "pozo",
-        villa_9: "santodomingo",
-        villa_10: "merced",
+        villa_teresa: "teresa",
+        villa_aduana: "aduana",
+        villa_trinidad: "trinidad",
+        villa_paz: "paz",
+        villa_san_pedro: "sanpedro",
+        villa_coches: "coche",
+        villa_pozo: "pozo",
+        villa_santo_domingo: "santodomingo",
+        villa_merced: "merced",
+        villa_unassigned: "unassigned",
+        full_house: "fullhouse",
       };
 
       if (statusData) {

@@ -109,16 +109,20 @@ const DAYS_EN = [
 ];
 
 const VILLAS = [
-  { id: "villa_1", name: "Villa 1", type: "Garden View" },
-  { id: "villa_2", name: "Villa 2", type: "Garden View" },
-  { id: "villa_3", name: "Villa 3", type: "Pool View" },
-  { id: "villa_4", name: "Villa 4", type: "Pool View" },
-  { id: "villa_5", name: "Villa 5", type: "Ocean View" },
-  { id: "villa_6", name: "Villa 6", type: "Ocean View" },
-  { id: "villa_7", name: "Villa 7", type: "Premium Ocean" },
-  { id: "villa_8", name: "Villa 8", type: "Premium Ocean" },
-  { id: "villa_9", name: "Villa 9", type: "Honeymoon Suite" },
-  { id: "villa_10", name: "Villa 10", type: "Honeymoon Suite" },
+  { id: "villa_aduana", name: "Aduana (Azul)", type: "Garden View" },
+  { id: "villa_coches", name: "Coches", type: "Garden View" },
+  { id: "villa_merced", name: "Merced (Morada)", type: "Pool View" },
+  { id: "villa_paz", name: "Paz (Limón)", type: "Pool View" },
+  { id: "villa_pozo", name: "Pozo (Teal)", type: "Ocean View" },
+  { id: "villa_san_pedro", name: "San Pedro (Magenta)", type: "Ocean View" },
+  {
+    id: "villa_santo_domingo",
+    name: "Santo Domingo (Mint)",
+    type: "Premium Ocean",
+  },
+  { id: "villa_teresa", name: "Teresa (Amarilla)", type: "Premium Ocean" },
+  { id: "villa_trinidad", name: "Trinidad (Durazno)", type: "Honeymoon Suite" },
+  { id: "full_house", name: "Full House", type: "Full Property" },
 ];
 
 const MAINTENANCE_TYPES = [

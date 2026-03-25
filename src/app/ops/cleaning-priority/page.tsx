@@ -11,36 +11,36 @@ import { useLanguage } from "@/lib/i18n/context";
 // Issue #8: No cleaning deadline enforcement
 // ═══════════════════════════════════════════════════════════════
 
-const VILLA_NAMES: Record<number, string> = {
-  1: "Teresa",
-  2: "Aduana",
-  3: "Trinidad",
-  4: "Paz",
-  5: "San Pedro",
-  6: "San Diego",
-  7: "Pozo",
-  8: "Santo Domingo",
-  9: "Merced",
-  10: "Coche",
+const VILLA_NAMES: Record<string, string> = {
+  villa_aduana: "Aduana (Azul)",
+  villa_coches: "Coches",
+  villa_merced: "Merced (Morada)",
+  villa_paz: "Paz (Limón)",
+  villa_pozo: "Pozo (Teal)",
+  villa_san_pedro: "San Pedro (Magenta)",
+  villa_santo_domingo: "Santo Domingo (Mint)",
+  villa_teresa: "Teresa (Amarilla)",
+  villa_trinidad: "Trinidad (Durazno)",
+  full_house: "Full House",
 };
 
-const VILLA_COLORS: Record<number, string> = {
-  1: "#2E8B57",
-  2: "#DAA520",
-  3: "#E85D3A",
-  4: "#E878A0",
-  5: "#C040A0",
-  6: "#E8A0C0",
-  7: "#00BCD4",
-  8: "#D32F2F",
-  9: "#D32F2F",
-  10: "#1565C0",
+const VILLA_COLORS: Record<string, string> = {
+  villa_aduana: "#3B82F6",
+  villa_coches: "#6B7280",
+  villa_merced: "#8B5CF6",
+  villa_paz: "#84CC16",
+  villa_pozo: "#14B8A6",
+  villa_san_pedro: "#EC4899",
+  villa_santo_domingo: "#10B981",
+  villa_teresa: "#F59E0B",
+  villa_trinidad: "#F97316",
+  full_house: "#1F2937",
 };
 
 interface CleaningJob {
   id: string;
   position: number;
-  villaNumber: number;
+  villaId: string;
   villaName: string;
   type: "full_clean" | "re_clean" | "deep_clean" | "retouch";
   priority: "URGENT" | "HIGH" | "MEDIUM" | "LOW";
@@ -81,7 +81,7 @@ export default function CleaningPriorityDashboard() {
   const [queue, setQueue] = useState<CleaningJob[]>([]);
   const [staff, setStaff] = useState<StaffWorkload[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedJob, setExpandedJob] = useState<number | null>(null);
+  const [expandedJob, setExpandedJob] = useState<string | null>(null);
 
   const loadCleaningQueue = useCallback(async () => {
     const supabase = createBrowserClient();
@@ -119,13 +119,9 @@ export default function CleaningPriorityDashboard() {
       const jobs: CleaningJob[] = [];
 
       for (const villa of villaStatus || []) {
-        const villaNumber =
-          villa.villa_number ||
-          parseInt(villa.villa_id?.replace("villa_", "") || "0");
-        const arrival = arrivals?.find((a) => a.villa_id === villa.villa_id);
-        const checklist = checklists?.find(
-          (c) => c.villa_number === villaNumber,
-        );
+        const villaId = villa.villa_id;
+        const arrival = arrivals?.find((a) => a.villa_id === villaId);
+        const checklist = checklists?.find((c) => c.villa_id === villaId);
 
         // Calculate priority score
         let score = 0;
@@ -169,7 +165,7 @@ export default function CleaningPriorityDashboard() {
               "Pozo",
               "Santo Domingo",
               "Aduana",
-            ].includes(VILLA_NAMES[villaNumber])
+            ].includes(VILLA_NAMES[villaId])
           ) {
             score += 10;
           }
@@ -190,7 +186,7 @@ export default function CleaningPriorityDashboard() {
         let duration = "60 min";
         if (
           ["Trinidad", "San Pedro", "Pozo", "Santo Domingo", "Aduana"].includes(
-            VILLA_NAMES[villaNumber],
+            VILLA_NAMES[villaId],
           )
         ) {
           duration = "75 min";
@@ -204,8 +200,8 @@ export default function CleaningPriorityDashboard() {
         jobs.push({
           id: villa.id,
           position: 0, // Will be set after sorting
-          villaNumber,
-          villaName: VILLA_NAMES[villaNumber] || `Villa ${villaNumber}`,
+          villaId,
+          villaName: VILLA_NAMES[villaId] || villaId,
           type: isReClean ? "re_clean" : "full_clean",
           priority,
           priorityScore: score,
@@ -452,7 +448,7 @@ export default function CleaningPriorityDashboard() {
           queue.map((job) => {
             const minutesLeft = getMinutesUntil(job.deadline);
             const urgencyColor = getUrgencyColor(minutesLeft, job.status);
-            const isExpanded = expandedJob === job.villaNumber;
+            const isExpanded = expandedJob === job.villaId;
             const pctToDeadline = Math.max(
               0,
               Math.min(100, (minutesLeft / 180) * 100),
@@ -461,9 +457,7 @@ export default function CleaningPriorityDashboard() {
             return (
               <div
                 key={job.id}
-                onClick={() =>
-                  setExpandedJob(isExpanded ? null : job.villaNumber)
-                }
+                onClick={() => setExpandedJob(isExpanded ? null : job.villaId)}
                 className="bg-white rounded-xl mb-2.5 border border-slate-200 cursor-pointer overflow-hidden transition-all hover:shadow-md"
                 style={{
                   borderLeftWidth: 5,
