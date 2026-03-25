@@ -1947,25 +1947,103 @@ export default function HousekeepingQCPage() {
                   })}
                 </div>
 
-                {/* Villa Cleaning Type Reference */}
+                {/* Villa Cleaning Type Reference with Actual Tasks */}
                 <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="text-xs font-bold text-slate-600 mb-2">
-                    Tipos de Limpieza:
+                  <div className="text-xs font-bold text-slate-600 mb-3">
+                    📋 Checklists por Tipo de Limpieza (del SOP TVC):
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
-                    <div>
-                      ✨ <strong>Retoque:</strong> 6 tareas (~15 min)
+
+                  {/* Retouch Tasks */}
+                  <details className="mb-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <summary className="p-3 cursor-pointer font-bold text-sm flex items-center gap-2">
+                      <span>✨</span>
+                      <span>Retoque ({VILLA_TASKS.retouch.length} tareas)</span>
+                    </summary>
+                    <div className="px-3 pb-3 space-y-1">
+                      {VILLA_TASKS.retouch.map((task, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-xs text-slate-600"
+                        >
+                          <span className="text-slate-400">•</span>
+                          <span>{task.task_es}</span>
+                          {task.photo_required && (
+                            <span className="text-amber-500">📸</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      🛏️ <strong>Ocupada:</strong> 9 tareas (~30 min)
+                  </details>
+
+                  {/* Occupied Tasks */}
+                  <details className="mb-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <summary className="p-3 cursor-pointer font-bold text-sm flex items-center gap-2 text-emerald-800">
+                      <span>🛏️</span>
+                      <span>
+                        Ocupada ({VILLA_TASKS.occupied.length} tareas)
+                      </span>
+                    </summary>
+                    <div className="px-3 pb-3 space-y-1">
+                      {VILLA_TASKS.occupied.map((task, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-xs text-slate-600"
+                        >
+                          <span className="text-slate-400">•</span>
+                          <span>{task.task_es}</span>
+                          {task.photo_required && (
+                            <span className="text-amber-500">📸</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      🚪 <strong>Llegada:</strong> 11 tareas (~45 min)
+                  </details>
+
+                  {/* Arriving Tasks */}
+                  <details className="mb-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <summary className="p-3 cursor-pointer font-bold text-sm flex items-center gap-2 text-blue-800">
+                      <span>🚪</span>
+                      <span>
+                        Llegada / Vacía ({VILLA_TASKS.arriving.length} tareas)
+                      </span>
+                    </summary>
+                    <div className="px-3 pb-3 space-y-1">
+                      {VILLA_TASKS.arriving.map((task, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-xs text-slate-600"
+                        >
+                          <span className="text-slate-400">•</span>
+                          <span>{task.task_es}</span>
+                          {task.photo_required && (
+                            <span className="text-amber-500">📸</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      👋 <strong>Salida:</strong> 9 tareas (~35 min)
+                  </details>
+
+                  {/* Leaving Tasks */}
+                  <details className="mb-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <summary className="p-3 cursor-pointer font-bold text-sm flex items-center gap-2 text-amber-800">
+                      <span>👋</span>
+                      <span>Salida ({VILLA_TASKS.leaving.length} tareas)</span>
+                    </summary>
+                    <div className="px-3 pb-3 space-y-1">
+                      {VILLA_TASKS.leaving.map((task, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-xs text-slate-600"
+                        >
+                          <span className="text-slate-400">•</span>
+                          <span>{task.task_es}</span>
+                          {task.photo_required && (
+                            <span className="text-amber-500">📸</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  </details>
                 </div>
               </div>
             </div>
@@ -2416,91 +2494,98 @@ export default function HousekeepingQCPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {["bathroom", "cleaning", "laundry", "linens", "supplies"].map(
-              (category) => {
-                const categoryItems = inventory.filter(
-                  (i) => i.category === category,
-                );
-                const categoryLabels: {
-                  [key: string]: { label: string; icon: string };
-                } = {
-                  bathroom: { label: "Baño / Amenidades", icon: "🧴" },
-                  cleaning: { label: "Productos de Limpieza", icon: "🧹" },
-                  laundry: { label: "Lavandería", icon: "👕" },
-                  linens: { label: "Blancos", icon: "🛏️" },
-                  supplies: { label: "Suministros", icon: "📦" },
-                };
+            {[
+              "paper",
+              "amenities",
+              "cleaning",
+              "laundry",
+              "linens",
+              "pool",
+            ].map((category) => {
+              const categoryItems = inventory.filter(
+                (i) => i.category === category,
+              );
+              if (categoryItems.length === 0) return null;
+              const categoryLabels: {
+                [key: string]: { label: string; icon: string };
+              } = {
+                paper: { label: "Papel y Accesorios", icon: "📜" },
+                amenities: { label: "Amenidades de Villa", icon: "🧴" },
+                cleaning: { label: "Productos de Limpieza", icon: "🧹" },
+                laundry: { label: "Lavandería", icon: "👕" },
+                linens: { label: "Blancos", icon: "🛏️" },
+                pool: { label: "Piscina", icon: "🏊" },
+                bathroom: { label: "Baño / Amenidades", icon: "🧴" },
+                supplies: { label: "Suministros", icon: "📦" },
+              };
 
-                return (
-                  <div
-                    key={category}
-                    className="bg-white rounded-xl border border-slate-200 p-4"
-                  >
-                    <h4 className="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
-                      <span>{categoryLabels[category]?.icon}</span>
-                      <span>{categoryLabels[category]?.label}</span>
-                    </h4>
-                    <div className="space-y-2">
-                      {categoryItems.map((item) => {
-                        const isLow = item.current_stock < item.min_stock;
-                        return (
-                          <div
-                            key={item.id}
-                            className={`flex items-center justify-between p-2 rounded-lg ${
-                              isLow
-                                ? "bg-rose-50 border border-rose-200"
-                                : "bg-slate-50"
-                            }`}
-                          >
-                            <div className="flex-1">
-                              <div
-                                className={`text-sm font-medium ${isLow ? "text-rose-700" : "text-slate-700"}`}
-                              >
-                                {item.name_es}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                Mín: {item.min_stock} {item.unit}
-                              </div>
+              return (
+                <div
+                  key={category}
+                  className="bg-white rounded-xl border border-slate-200 p-4"
+                >
+                  <h4 className="font-bold text-sm text-slate-700 mb-3 flex items-center gap-2">
+                    <span>{categoryLabels[category]?.icon}</span>
+                    <span>{categoryLabels[category]?.label}</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {categoryItems.map((item) => {
+                      const isLow = item.current_stock < item.min_stock;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between p-2 rounded-lg ${
+                            isLow
+                              ? "bg-rose-50 border border-rose-200"
+                              : "bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex-1">
+                            <div
+                              className={`text-sm font-medium ${isLow ? "text-rose-700" : "text-slate-700"}`}
+                            >
+                              {item.name_es}
                             </div>
-                            <div className="flex items-center gap-2">
-                              {isAdmin ? (
-                                <input
-                                  type="number"
-                                  value={item.current_stock}
-                                  onChange={(e) =>
-                                    handleUpdateInventory(
-                                      item.id,
-                                      parseInt(e.target.value) || 0,
-                                    )
-                                  }
-                                  className={`w-16 px-2 py-1 text-sm rounded border text-center ${
-                                    isLow
-                                      ? "border-rose-300 bg-rose-100"
-                                      : "border-slate-200"
-                                  }`}
-                                />
-                              ) : (
-                                <span
-                                  className={`text-sm font-bold ${isLow ? "text-rose-600" : "text-slate-700"}`}
-                                >
-                                  {item.current_stock}
-                                </span>
-                              )}
-                              <span className="text-xs text-slate-400">
-                                {item.unit}
-                              </span>
-                              {isLow && (
-                                <span className="text-rose-500">⚠️</span>
-                              )}
+                            <div className="text-xs text-slate-400">
+                              Mín: {item.min_stock} {item.unit}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="flex items-center gap-2">
+                            {isAdmin ? (
+                              <input
+                                type="number"
+                                value={item.current_stock}
+                                onChange={(e) =>
+                                  handleUpdateInventory(
+                                    item.id,
+                                    parseInt(e.target.value) || 0,
+                                  )
+                                }
+                                className={`w-16 px-2 py-1 text-sm rounded border text-center ${
+                                  isLow
+                                    ? "border-rose-300 bg-rose-100"
+                                    : "border-slate-200"
+                                }`}
+                              />
+                            ) : (
+                              <span
+                                className={`text-sm font-bold ${isLow ? "text-rose-600" : "text-slate-700"}`}
+                              >
+                                {item.current_stock}
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-400">
+                              {item.unit}
+                            </span>
+                            {isLow && <span className="text-rose-500">⚠️</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              },
-            )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Low Stock Alert Summary */}

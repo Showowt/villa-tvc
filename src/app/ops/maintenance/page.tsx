@@ -1252,8 +1252,26 @@ export default function MaintenanceQCPage() {
   const getTasksForDay = (dayName: string): MaintenanceTask[] => {
     const defaults = DEFAULT_TASKS[dayName] || [];
     const custom = customTasks[dayName] || [];
-    return [...defaults, ...custom];
+    // Include daily tasks that appear every day
+    const dailyTasks = DEFAULT_TASKS["daily"] || [];
+    return [...dailyTasks, ...defaults, ...custom];
   };
+
+  const getPoolTasks = (time: "8am" | "2pm" | "8pm") => {
+    switch (time) {
+      case "8am":
+        return POOL_TASKS_8AM;
+      case "2pm":
+        return POOL_TASKS_2PM;
+      case "8pm":
+        return POOL_TASKS_8PM;
+      default:
+        return [];
+    }
+  };
+
+  const getWeeklyTasks = () => DEFAULT_TASKS["weekly"] || [];
+  const getMonthlyTasks = () => DEFAULT_TASKS["monthly"] || [];
 
   if (loading) {
     return (
@@ -1583,24 +1601,90 @@ export default function MaintenanceQCPage() {
                 </div>
               </div>
 
+              {/* Pool Check Details - Expandable */}
+              <div className="mb-6">
+                <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
+                  📋 Tareas de Revisión de Piscina
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(["8am", "2pm", "8pm"] as const).map((time) => (
+                    <div
+                      key={time}
+                      className={`rounded-lg border p-4 ${
+                        selectedDay.poolChecks[time]
+                          ? "bg-emerald-50 border-emerald-200"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-bold text-lg">
+                          {time === "8am"
+                            ? "🌅 8:00 AM"
+                            : time === "2pm"
+                              ? "☀️ 2:00 PM"
+                              : "🌙 8:00 PM"}
+                        </span>
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded ${
+                            selectedDay.poolChecks[time]
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-amber-100 text-amber-600"
+                          }`}
+                        >
+                          {selectedDay.poolChecks[time]
+                            ? "✓ Completado"
+                            : "Pendiente"}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {getPoolTasks(time).map((task) => (
+                          <div
+                            key={task.id}
+                            className="flex items-start gap-2 text-xs text-slate-600"
+                          >
+                            <span className="text-slate-400 mt-0.5">•</span>
+                            <span>{task.task_es}</span>
+                            {task.photo_required && (
+                              <span className="text-amber-500">📸</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Daily Tasks */}
               <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                Tareas del {selectedDay.dayNameEs}
+                🔧 Tareas del {selectedDay.dayNameEs} (
+                {getTasksForDay(selectedDay.dayName).length} tareas)
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-2 mb-6">
                 {getTasksForDay(selectedDay.dayName).map((task) => (
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                        🔧
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          task.day === "daily"
+                            ? "bg-purple-100 text-purple-600"
+                            : "bg-blue-100 text-blue-600"
+                        }`}
+                      >
+                        {task.day === "daily" ? "📅" : "🔧"}
                       </div>
                       <div>
                         <div className="font-medium text-slate-900 flex items-center gap-2">
                           {task.task_es}
                           {getPriorityBadge(task.priority)}
+                          {task.day === "daily" && (
+                            <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">
+                              DIARIO
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500 flex items-center gap-2">
                           <span>⏱️ ~{task.estimated_minutes} min</span>
@@ -1636,6 +1720,65 @@ export default function MaintenanceQCPage() {
                     No hay tareas programadas para este día
                   </div>
                 )}
+              </div>
+
+              {/* Weekly Tasks */}
+              <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
+                📆 Tareas Semanales
+              </h4>
+              <div className="space-y-2 mb-6">
+                {getWeeklyTasks().map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                        📆
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900 flex items-center gap-2">
+                          {task.task_es}
+                          {getPriorityBadge(task.priority)}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          ⏱️ ~{task.estimated_minutes} min
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Monthly Tasks */}
+              <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
+                📅 Tareas Mensuales
+              </h4>
+              <div className="space-y-2">
+                {getMonthlyTasks().map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                        📅
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900 flex items-center gap-2">
+                          {task.task_es}
+                          {getPriorityBadge(task.priority)}
+                          {task.photo_required && (
+                            <span className="text-amber-500">📸</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          ⏱️ ~{task.estimated_minutes} min
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
