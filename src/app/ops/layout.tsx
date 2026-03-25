@@ -52,6 +52,12 @@ const NAV_ITEMS = [
     href: "/ops/maintenance",
     icon: "🔧",
   },
+  {
+    key: "villa-map",
+    labelKey: "nav.villa_map",
+    href: "/ops/villa-map",
+    icon: "🗺️",
+  },
 ];
 
 function LanguageToggle() {

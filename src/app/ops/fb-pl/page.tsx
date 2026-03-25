@@ -2,10 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { StatCard } from "@/components/ops/StatCard";
+import { TaskItem, type TaskItemData } from "@/components/ops/TaskItem";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database";
 
+interface KitchenTaskProgress {
+  [checklistType: string]: {
+    [taskIndex: string]: {
+      completed: boolean;
+      photo_url?: string;
+      notes?: string;
+    };
+  };
+}
+
 type DishPL = Tables<"dish_pl">;
+
+interface KitchenChecklist {
+  type: string;
+  name: string;
+  name_es: string;
+  items: { task: string; task_es: string; photo_required?: boolean }[];
+  estimated_minutes: number;
+}
 
 const fmt = (n: number) => n.toLocaleString();
 
@@ -15,10 +34,106 @@ export default function FBPLPage() {
   const [dishes, setDishes] = useState<DishPL[]>([]);
   const [selected, setSelected] = useState<DishPL | null>(null);
   const [loading, setLoading] = useState(true);
+  const [kitchenChecklists, setKitchenChecklists] = useState<
+    KitchenChecklist[]
+  >([]);
+  const [expandedChecklist, setExpandedChecklist] = useState<string | null>(
+    null,
+  );
+  const [kitchenProgress, setKitchenProgress] = useState<KitchenTaskProgress>(
+    {},
+  );
 
   useEffect(() => {
     loadDishes();
+    loadKitchenChecklists();
+
+    // Load kitchen progress from localStorage
+    const today = new Date().toISOString().split("T")[0];
+    const saved = localStorage.getItem(`tvc_kitchen_progress_${today}`);
+    if (saved) {
+      try {
+        setKitchenProgress(JSON.parse(saved));
+      } catch {
+        console.error("Failed to parse kitchen progress");
+      }
+    }
   }, []);
+
+  // Save kitchen progress to localStorage
+  useEffect(() => {
+    if (Object.keys(kitchenProgress).length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      localStorage.setItem(
+        `tvc_kitchen_progress_${today}`,
+        JSON.stringify(kitchenProgress),
+      );
+    }
+  }, [kitchenProgress]);
+
+  const handleKitchenTaskToggle = (
+    checklistType: string,
+    taskIndex: number,
+    completed: boolean,
+  ) => {
+    setKitchenProgress((prev) => ({
+      ...prev,
+      [checklistType]: {
+        ...prev[checklistType],
+        [taskIndex]: {
+          ...prev[checklistType]?.[taskIndex],
+          completed,
+        },
+      },
+    }));
+  };
+
+  const handleKitchenPhotoUpload = (
+    checklistType: string,
+    taskIndex: number,
+    photoUrl: string,
+  ) => {
+    setKitchenProgress((prev) => ({
+      ...prev,
+      [checklistType]: {
+        ...prev[checklistType],
+        [taskIndex]: {
+          ...prev[checklistType]?.[taskIndex],
+          photo_url: photoUrl,
+        },
+      },
+    }));
+  };
+
+  const handleKitchenPhotoRemove = (
+    checklistType: string,
+    taskIndex: number,
+  ) => {
+    setKitchenProgress((prev) => ({
+      ...prev,
+      [checklistType]: {
+        ...prev[checklistType],
+        [taskIndex]: {
+          ...prev[checklistType]?.[taskIndex],
+          photo_url: undefined,
+        },
+      },
+    }));
+  };
+
+  const loadKitchenChecklists = async () => {
+    const supabase = createBrowserClient();
+    const { data, error } = await supabase
+      .from("checklist_templates")
+      .select("type, name, name_es, items, estimated_minutes")
+      .eq("department", "kitchen")
+      .eq("is_active", true)
+      .order("type");
+
+    if (!error && data) {
+      setKitchenChecklists(data as KitchenChecklist[]);
+    }
+  };
 
   useEffect(() => {
     // Set first item as selected when view changes
@@ -338,6 +453,169 @@ export default function FBPLPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Kitchen Operations Checklists */}
+      {kitchenChecklists.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-extrabold mb-3">
+            👨‍🍳 Kitchen Operations Checklists
+          </h2>
+          <p className="text-slate-500 text-xs mb-4">
+            Daily kitchen procedures and service prep. Click to expand and view
+            all tasks.
+          </p>
+          <div className="grid gap-3">
+            {kitchenChecklists.map((checklist) => (
+              <details
+                key={checklist.type}
+                className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+                open={expandedChecklist === checklist.type}
+                onToggle={(e) => {
+                  if ((e.target as HTMLDetailsElement).open) {
+                    setExpandedChecklist(checklist.type);
+                  } else if (expandedChecklist === checklist.type) {
+                    setExpandedChecklist(null);
+                  }
+                }}
+              >
+                <summary className="px-4 py-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {checklist.type === "kitchen_open" && "🌅"}
+                      {checklist.type === "breakfast_setup" && "🍳"}
+                      {checklist.type === "kitchen_lunch_prep" && "🥗"}
+                      {checklist.type === "kitchen_dinner_prep" && "🍽️"}
+                      {checklist.type === "kitchen_close" && "🌙"}
+                    </span>
+                    <div>
+                      <div className="font-bold text-slate-900">
+                        {checklist.name_es}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {checklist.name}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs bg-slate-100 px-2 py-1 rounded-lg font-semibold">
+                      {checklist.items.length} tareas
+                    </span>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg font-semibold">
+                      ~{checklist.estimated_minutes} min
+                    </span>
+                  </div>
+                </summary>
+                <div className="px-4 pb-4 pt-2 border-t border-slate-100">
+                  {/* Progress bar */}
+                  {(() => {
+                    const progress = kitchenProgress[checklist.type] || {};
+                    const completed = Object.values(progress).filter(
+                      (p) => p.completed,
+                    ).length;
+                    const total = checklist.items.length;
+                    const pct =
+                      total > 0 ? Math.round((completed / total) * 100) : 0;
+                    return (
+                      <div className="mb-3 flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-slate-600">
+                          {completed}/{total}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="space-y-2">
+                    {checklist.items.map((item, idx) => {
+                      const progress =
+                        kitchenProgress[checklist.type]?.[idx] || {};
+                      return (
+                        <TaskItem
+                          key={idx}
+                          task={{
+                            id: `${checklist.type}_${idx}`,
+                            task: item.task,
+                            task_es: item.task_es,
+                            photo_required: item.photo_required || false,
+                            completed: progress.completed || false,
+                            photo_url: progress.photo_url,
+                            notes: progress.notes,
+                          }}
+                          index={idx}
+                          onToggle={(taskId, completed) =>
+                            handleKitchenTaskToggle(
+                              checklist.type,
+                              idx,
+                              completed,
+                            )
+                          }
+                          onPhotoUpload={(taskId, url) =>
+                            handleKitchenPhotoUpload(checklist.type, idx, url)
+                          }
+                          onPhotoRemove={(taskId) =>
+                            handleKitchenPhotoRemove(checklist.type, idx)
+                          }
+                          context="kitchen"
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Submit button */}
+                  {(() => {
+                    const progress = kitchenProgress[checklist.type] || {};
+                    const completed = Object.values(progress).filter(
+                      (p) => p.completed,
+                    ).length;
+                    const total = checklist.items.length;
+                    const photosUploaded = checklist.items.filter(
+                      (item, idx) =>
+                        item.photo_required && progress[idx]?.photo_url,
+                    ).length;
+                    const photosRequired = checklist.items.filter(
+                      (item) => item.photo_required,
+                    ).length;
+                    const canSubmit =
+                      completed === total && photosUploaded >= photosRequired;
+
+                    return (
+                      <button
+                        onClick={() => {
+                          if (!canSubmit) {
+                            alert(
+                              completed < total
+                                ? `Completa todas las tareas (${completed}/${total})`
+                                : `Sube todas las fotos requeridas (${photosUploaded}/${photosRequired})`,
+                            );
+                            return;
+                          }
+                          alert(
+                            `✅ ${checklist.name_es} enviado para aprobación`,
+                          );
+                        }}
+                        className={`mt-3 w-full py-2 rounded-lg font-bold text-sm transition-all ${
+                          canSubmit
+                            ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                            : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        {canSubmit
+                          ? "✅ Enviar para Aprobación"
+                          : `${completed}/${total} tareas completadas`}
+                      </button>
+                    );
+                  })()}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

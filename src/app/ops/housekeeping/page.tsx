@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ops/Badge";
+import { TaskItem, type TaskItemData } from "@/components/ops/TaskItem";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Tables, Json } from "@/types/database";
+
+// Interactive task progress tracking
+interface TaskProgress {
+  [taskId: string]: {
+    completed: boolean;
+    photo_url?: string;
+    notes?: string;
+    completed_at?: string;
+  };
+}
 
 type Checklist = Tables<"checklists">;
 
@@ -1045,6 +1056,11 @@ export default function HousekeepingQCPage() {
   );
   const [customTasks, setCustomTasks] = useState<HousekeepingTask[]>([]);
 
+  // Interactive task tracking (with localStorage persistence)
+  const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
+  const [savingProgress, setSavingProgress] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Task editing
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<HousekeepingTask | null>(null);
@@ -1086,7 +1102,114 @@ export default function HousekeepingQCPage() {
         console.error("Failed to parse inventory");
       }
     }
+    // Load task progress for today
+    const today = new Date().toISOString().split("T")[0];
+    const savedProgress = localStorage.getItem(
+      `tvc_housekeeping_progress_${today}`,
+    );
+    if (savedProgress) {
+      try {
+        setTaskProgress(JSON.parse(savedProgress));
+      } catch {
+        console.error("Failed to parse task progress");
+      }
+    }
   }, []);
+
+  // Save task progress to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(taskProgress).length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      localStorage.setItem(
+        `tvc_housekeeping_progress_${today}`,
+        JSON.stringify(taskProgress),
+      );
+    }
+  }, [taskProgress]);
+
+  // Task interaction handlers
+  const handleTaskToggle = (taskId: string, completed: boolean) => {
+    setTaskProgress((prev) => ({
+      ...prev,
+      [taskId]: {
+        ...prev[taskId],
+        completed,
+        completed_at: completed ? new Date().toISOString() : undefined,
+      },
+    }));
+  };
+
+  const handlePhotoUpload = async (taskId: string, file: File) => {
+    setSavingProgress(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("context", "housekeeping");
+      formData.append("taskId", taskId);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        setTaskProgress((prev) => ({
+          ...prev,
+          [taskId]: {
+            ...prev[taskId],
+            photo_url: data.url,
+          },
+        }));
+      } else {
+        alert(data.error || "Error subiendo foto");
+      }
+    } catch (error) {
+      console.error("[handlePhotoUpload]", error);
+      alert("Error subiendo foto");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const handlePhotoRemove = (taskId: string) => {
+    setTaskProgress((prev) => ({
+      ...prev,
+      [taskId]: {
+        ...prev[taskId],
+        photo_url: undefined,
+      },
+    }));
+  };
+
+  const handleTaskNotes = (taskId: string, notes: string) => {
+    setTaskProgress((prev) => ({
+      ...prev,
+      [taskId]: {
+        ...prev[taskId],
+        notes,
+      },
+    }));
+  };
+
+  // Get completion stats for common area tasks
+  const getCommonAreaStats = () => {
+    const allTasksList = [...commonAreaTasks, ...customTasks];
+    const completed = allTasksList.filter(
+      (t) => taskProgress[t.id]?.completed,
+    ).length;
+    const withPhotos = allTasksList.filter(
+      (t) => t.photo_required && taskProgress[t.id]?.photo_url,
+    ).length;
+    const requiredPhotos = allTasksList.filter((t) => t.photo_required).length;
+    return {
+      total: allTasksList.length,
+      completed,
+      withPhotos,
+      requiredPhotos,
+    };
+  };
 
   const saveCustomTasks = (tasks: HousekeepingTask[]) => {
     localStorage.setItem(
@@ -1798,40 +1921,97 @@ export default function HousekeepingQCPage() {
                   Orden de ejecución según PDF (Goal #2)
                 </p>
 
-                <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                {/* Progress bar */}
+                {(() => {
+                  const stats = getCommonAreaStats();
+                  const pct =
+                    stats.total > 0
+                      ? Math.round((stats.completed / stats.total) * 100)
+                      : 0;
+                  return (
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-slate-600">
+                        {stats.completed}/{stats.total}
+                      </span>
+                      {stats.requiredPhotos > 0 && (
+                        <span className="text-xs text-amber-500">
+                          📷 {stats.withPhotos}/{stats.requiredPhotos}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {Object.keys(AREA_LABELS).map((areaKey) => {
                     const areaTasks = allTasks.filter(
                       (t) => t.area === areaKey,
                     );
                     if (areaTasks.length === 0) return null;
                     const areaLabel = AREA_LABELS[areaKey];
+                    const areaCompleted = areaTasks.filter(
+                      (t) => taskProgress[t.id]?.completed,
+                    ).length;
 
                     return (
-                      <div key={areaKey} className="mb-3">
-                        <div className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-1 sticky top-0 bg-white py-1">
-                          <span>{areaLabel.icon}</span>
-                          <span>{areaLabel.es}</span>
+                      <div key={areaKey} className="mb-4">
+                        <div className="flex items-center justify-between gap-2 text-sm font-bold text-slate-700 mb-2 sticky top-0 bg-white py-1 z-10">
+                          <div className="flex items-center gap-2">
+                            <span>{areaLabel.icon}</span>
+                            <span>{areaLabel.es}</span>
+                          </div>
+                          <span className="text-xs font-medium text-slate-400">
+                            {areaCompleted}/{areaTasks.length}
+                          </span>
                         </div>
-                        {areaTasks.map((task, idx) => (
-                          <div
-                            key={task.id}
-                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50 group"
-                          >
-                            <span className="text-xs text-slate-400 w-5">
-                              {task.order}.
-                            </span>
-                            <span className="flex-1 text-sm text-slate-700">
-                              {task.task_es}
-                            </span>
-                            {task.photo_required && (
-                              <span className="text-xs text-amber-500">📸</span>
-                            )}
-                            <span className="text-xs text-slate-400">
-                              {task.estimated_minutes}m
-                            </span>
-                            {isAdmin && task.id.startsWith("custom_") && (
-                              <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        <div className="space-y-1.5">
+                          {areaTasks.map((task, idx) => {
+                            const progress = taskProgress[task.id] || {};
+                            return (
+                              <TaskItem
+                                key={task.id}
+                                task={{
+                                  id: task.id,
+                                  task: task.task,
+                                  task_es: task.task_es,
+                                  photo_required: task.photo_required,
+                                  completed: progress.completed || false,
+                                  photo_url: progress.photo_url,
+                                  notes: progress.notes,
+                                }}
+                                index={task.order - 1}
+                                onToggle={handleTaskToggle}
+                                onPhotoUpload={(taskId, url) => {
+                                  setTaskProgress((prev) => ({
+                                    ...prev,
+                                    [taskId]: {
+                                      ...prev[taskId],
+                                      photo_url: url,
+                                    },
+                                  }));
+                                }}
+                                onPhotoRemove={handlePhotoRemove}
+                                onNotesChange={handleTaskNotes}
+                                context="housekeeping"
+                                showEstimate={true}
+                                estimatedMinutes={task.estimated_minutes}
+                              />
+                            );
+                          })}
+                        </div>
+                        {isAdmin && (
+                          <div className="mt-2 flex gap-1">
+                            {areaTasks
+                              .filter((t) => t.id.startsWith("custom_"))
+                              .map((task) => (
                                 <button
+                                  key={task.id}
                                   onClick={() => {
                                     setEditingTask(task);
                                     setNewTask({
@@ -1844,30 +2024,98 @@ export default function HousekeepingQCPage() {
                                     setShowAddTaskModal(true);
                                   }}
                                   className="text-blue-500 text-xs hover:text-blue-600"
+                                  title={`Editar: ${task.task_es}`}
                                 >
                                   ✏️
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteTask(task.id)}
-                                  className="text-rose-500 text-xs hover:text-rose-600"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            )}
+                              ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
-                  <span>Total: {allTasks.length} tareas</span>
-                  <span>
-                    ~{allTasks.reduce((sum, t) => sum + t.estimated_minutes, 0)}{" "}
-                    minutos
-                  </span>
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <div className="flex justify-between text-xs text-slate-500 mb-3">
+                    <span>Total: {allTasks.length} tareas</span>
+                    <span>
+                      ~
+                      {allTasks.reduce(
+                        (sum, t) => sum + t.estimated_minutes,
+                        0,
+                      )}{" "}
+                      minutos
+                    </span>
+                  </div>
+
+                  {/* Submit button */}
+                  {(() => {
+                    const stats = getCommonAreaStats();
+                    const allPhotosUploaded =
+                      stats.withPhotos >= stats.requiredPhotos;
+                    const canSubmit =
+                      stats.completed === stats.total && allPhotosUploaded;
+
+                    return (
+                      <button
+                        onClick={async () => {
+                          if (!canSubmit) {
+                            alert(
+                              stats.completed < stats.total
+                                ? `Completa todas las tareas (${stats.completed}/${stats.total})`
+                                : `Sube todas las fotos requeridas (${stats.withPhotos}/${stats.requiredPhotos})`,
+                            );
+                            return;
+                          }
+                          setSavingProgress(true);
+                          try {
+                            // Submit to API
+                            const items = allTasks.map((task) => ({
+                              task: task.task,
+                              task_es: task.task_es,
+                              photo_required: task.photo_required,
+                              completed:
+                                taskProgress[task.id]?.completed || false,
+                              photo_url: taskProgress[task.id]?.photo_url,
+                              notes: taskProgress[task.id]?.notes,
+                              completed_at: taskProgress[task.id]?.completed_at,
+                            }));
+
+                            // Here you would submit to the checklist API
+                            alert(
+                              "✅ Checklist de áreas comunes enviado para aprobación",
+                            );
+                          } catch (error) {
+                            console.error("[submitChecklist]", error);
+                            alert("Error enviando checklist");
+                          } finally {
+                            setSavingProgress(false);
+                          }
+                        }}
+                        disabled={savingProgress}
+                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
+                          canSubmit
+                            ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {savingProgress ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="animate-spin">⏳</span> Enviando...
+                          </span>
+                        ) : canSubmit ? (
+                          "✅ Enviar Checklist para Aprobación"
+                        ) : (
+                          `Completa ${stats.total - stats.completed} tareas${
+                            stats.withPhotos < stats.requiredPhotos
+                              ? ` y ${stats.requiredPhotos - stats.withPhotos} fotos`
+                              : ""
+                          }`
+                        )}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 

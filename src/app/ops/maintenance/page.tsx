@@ -1,9 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ops/Badge";
+import { TaskItem, type TaskItemData } from "@/components/ops/TaskItem";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Tables, Json } from "@/types/database";
+
+// Interactive task progress tracking
+interface TaskProgress {
+  [taskId: string]: {
+    completed: boolean;
+    photo_url?: string;
+    notes?: string;
+    completed_at?: string;
+    // Pool-specific readings
+    chlorine_level?: number;
+    ph_level?: number;
+    temperature?: number;
+  };
+}
 
 type Checklist = Tables<"checklists">;
 
@@ -801,6 +816,195 @@ export default function MaintenanceQCPage() {
     avgApprovalTime: 0,
     poolChecksToday: 0,
   });
+
+  // Interactive task tracking (with localStorage persistence)
+  const [taskProgress, setTaskProgress] = useState<TaskProgress>({});
+  const [poolProgress, setPoolProgress] = useState<{
+    [key: string]: TaskProgress;
+  }>({});
+  const [savingProgress, setSavingProgress] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load task progress from localStorage
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+
+    // Load maintenance task progress
+    const savedProgress = localStorage.getItem(
+      `tvc_maintenance_progress_${today}`,
+    );
+    if (savedProgress) {
+      try {
+        setTaskProgress(JSON.parse(savedProgress));
+      } catch {
+        console.error("Failed to parse maintenance progress");
+      }
+    }
+
+    // Load pool task progress
+    const savedPoolProgress = localStorage.getItem(
+      `tvc_pool_progress_${today}`,
+    );
+    if (savedPoolProgress) {
+      try {
+        setPoolProgress(JSON.parse(savedPoolProgress));
+      } catch {
+        console.error("Failed to parse pool progress");
+      }
+    }
+  }, []);
+
+  // Save task progress to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(taskProgress).length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      localStorage.setItem(
+        `tvc_maintenance_progress_${today}`,
+        JSON.stringify(taskProgress),
+      );
+    }
+  }, [taskProgress]);
+
+  useEffect(() => {
+    if (Object.keys(poolProgress).length > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      localStorage.setItem(
+        `tvc_pool_progress_${today}`,
+        JSON.stringify(poolProgress),
+      );
+    }
+  }, [poolProgress]);
+
+  // Task interaction handlers
+  const handleTaskToggle = (taskId: string, completed: boolean) => {
+    setTaskProgress((prev) => ({
+      ...prev,
+      [taskId]: {
+        ...prev[taskId],
+        completed,
+        completed_at: completed ? new Date().toISOString() : undefined,
+      },
+    }));
+  };
+
+  const handlePoolTaskToggle = (
+    poolType: string,
+    taskId: string,
+    completed: boolean,
+  ) => {
+    setPoolProgress((prev) => ({
+      ...prev,
+      [poolType]: {
+        ...prev[poolType],
+        [taskId]: {
+          ...prev[poolType]?.[taskId],
+          completed,
+          completed_at: completed ? new Date().toISOString() : undefined,
+        },
+      },
+    }));
+  };
+
+  const handlePoolReading = (
+    poolType: string,
+    taskId: string,
+    readingType: string,
+    value: number,
+  ) => {
+    setPoolProgress((prev) => ({
+      ...prev,
+      [poolType]: {
+        ...prev[poolType],
+        [taskId]: {
+          ...prev[poolType]?.[taskId],
+          [`${readingType}_level`]: value,
+        },
+      },
+    }));
+  };
+
+  const handlePhotoUpload = async (
+    taskId: string,
+    file: File,
+    poolType?: string,
+  ) => {
+    setSavingProgress(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("context", poolType ? "pool" : "maintenance");
+      formData.append("taskId", taskId);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        if (poolType) {
+          setPoolProgress((prev) => ({
+            ...prev,
+            [poolType]: {
+              ...prev[poolType],
+              [taskId]: { ...prev[poolType]?.[taskId], photo_url: data.url },
+            },
+          }));
+        } else {
+          setTaskProgress((prev) => ({
+            ...prev,
+            [taskId]: { ...prev[taskId], photo_url: data.url },
+          }));
+        }
+      } else {
+        alert(data.error || "Error subiendo foto");
+      }
+    } catch (error) {
+      console.error("[handlePhotoUpload]", error);
+      alert("Error subiendo foto");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const handlePhotoRemove = (taskId: string, poolType?: string) => {
+    if (poolType) {
+      setPoolProgress((prev) => ({
+        ...prev,
+        [poolType]: {
+          ...prev[poolType],
+          [taskId]: { ...prev[poolType]?.[taskId], photo_url: undefined },
+        },
+      }));
+    } else {
+      setTaskProgress((prev) => ({
+        ...prev,
+        [taskId]: { ...prev[taskId], photo_url: undefined },
+      }));
+    }
+  };
+
+  const handleTaskNotes = (
+    taskId: string,
+    notes: string,
+    poolType?: string,
+  ) => {
+    if (poolType) {
+      setPoolProgress((prev) => ({
+        ...prev,
+        [poolType]: {
+          ...prev[poolType],
+          [taskId]: { ...prev[poolType]?.[taskId], notes },
+        },
+      }));
+    } else {
+      setTaskProgress((prev) => ({
+        ...prev,
+        [taskId]: { ...prev[taskId], notes },
+      }));
+    }
+  };
 
   // Build week data
   const buildWeekData = useCallback(
@@ -1636,49 +1840,201 @@ export default function MaintenanceQCPage() {
                             : "Pendiente"}
                         </span>
                       </div>
+                      {/* Interactive pool tasks */}
                       <div className="space-y-1.5">
-                        {getPoolTasks(time).map((task) => (
-                          <div
-                            key={task.id}
-                            className="flex items-start gap-2 text-xs text-slate-600"
-                          >
-                            <span className="text-slate-400 mt-0.5">•</span>
-                            <span>{task.task_es}</span>
-                            {task.photo_required && (
-                              <span className="text-amber-500">📸</span>
-                            )}
-                          </div>
-                        ))}
+                        {getPoolTasks(time).map((task, idx) => {
+                          const poolType = `pool_${time}`;
+                          const progress =
+                            poolProgress[poolType]?.[task.id] || {};
+                          return (
+                            <TaskItem
+                              key={task.id}
+                              task={{
+                                id: task.id,
+                                task: task.task,
+                                task_es: task.task_es,
+                                photo_required: task.photo_required,
+                                completed: progress.completed || false,
+                                photo_url: progress.photo_url,
+                                notes: progress.notes,
+                                has_reading: (
+                                  task as typeof task & {
+                                    has_reading?: boolean;
+                                  }
+                                ).has_reading,
+                                reading_type: (
+                                  task as typeof task & {
+                                    reading_type?:
+                                      | "chlorine"
+                                      | "ph"
+                                      | "temperature";
+                                  }
+                                ).reading_type,
+                                reading_value: progress[
+                                  `${(task as typeof task & { reading_type?: string }).reading_type}_level` as keyof typeof progress
+                                ] as number | undefined,
+                              }}
+                              index={idx}
+                              onToggle={(taskId, completed) =>
+                                handlePoolTaskToggle(
+                                  poolType,
+                                  taskId,
+                                  completed,
+                                )
+                              }
+                              onPhotoUpload={(taskId, url) => {
+                                setPoolProgress((prev) => ({
+                                  ...prev,
+                                  [poolType]: {
+                                    ...prev[poolType],
+                                    [taskId]: {
+                                      ...prev[poolType]?.[taskId],
+                                      photo_url: url,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onPhotoRemove={(taskId) =>
+                                handlePhotoRemove(taskId, poolType)
+                              }
+                              onReadingChange={(taskId, value) => {
+                                const readingType = (
+                                  task as typeof task & {
+                                    reading_type?: string;
+                                  }
+                                ).reading_type;
+                                if (readingType) {
+                                  handlePoolReading(
+                                    poolType,
+                                    taskId,
+                                    readingType,
+                                    value,
+                                  );
+                                }
+                              }}
+                              onNotesChange={(taskId, notes) =>
+                                handleTaskNotes(taskId, notes, poolType)
+                              }
+                              context="pool"
+                            />
+                          );
+                        })}
                       </div>
+
+                      {/* Pool check submit button */}
+                      {(() => {
+                        const poolType = `pool_${time}`;
+                        const tasks = getPoolTasks(time);
+                        const progress = poolProgress[poolType] || {};
+                        const completed = tasks.filter(
+                          (t) => progress[t.id]?.completed,
+                        ).length;
+                        const photosUploaded = tasks.filter(
+                          (t) => t.photo_required && progress[t.id]?.photo_url,
+                        ).length;
+                        const photosRequired = tasks.filter(
+                          (t) => t.photo_required,
+                        ).length;
+                        const canSubmit =
+                          completed === tasks.length &&
+                          photosUploaded >= photosRequired;
+
+                        return (
+                          <button
+                            onClick={() => {
+                              if (!canSubmit) {
+                                alert(
+                                  completed < tasks.length
+                                    ? `Completa todas las tareas (${completed}/${tasks.length})`
+                                    : `Sube todas las fotos requeridas (${photosUploaded}/${photosRequired})`,
+                                );
+                                return;
+                              }
+                              alert(
+                                `✅ Pool check ${time} enviado para aprobación`,
+                              );
+                            }}
+                            className={`mt-3 w-full py-2 rounded-lg text-xs font-bold transition-all ${
+                              canSubmit
+                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                                : "bg-slate-100 text-slate-400"
+                            }`}
+                          >
+                            {canSubmit
+                              ? "✅ Enviar"
+                              : `${completed}/${tasks.length} tareas`}
+                          </button>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Daily Tasks */}
-              <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                🔧 Tareas del {selectedDay.dayNameEs} (
-                {getTasksForDay(selectedDay.dayName).length} tareas)
-              </h4>
-              <div className="space-y-2 mb-6">
-                {getTasksForDay(selectedDay.dayName).map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          task.day === "daily"
-                            ? "bg-purple-100 text-purple-600"
-                            : "bg-blue-100 text-blue-600"
-                        }`}
-                      >
-                        {task.day === "daily" ? "📅" : "🔧"}
+              {/* Daily Tasks - Interactive */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-slate-600 uppercase tracking-wide">
+                    🔧 Tareas del {selectedDay.dayNameEs}
+                  </h4>
+                  {(() => {
+                    const tasks = getTasksForDay(selectedDay.dayName);
+                    const completed = tasks.filter(
+                      (t) => taskProgress[t.id]?.completed,
+                    ).length;
+                    const pct =
+                      tasks.length > 0
+                        ? Math.round((completed / tasks.length) * 100)
+                        : 0;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-600">
+                          {completed}/{tasks.length}
+                        </span>
+                        <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-slate-900 flex items-center gap-2">
-                          {task.task_es}
+                    );
+                  })()}
+                </div>
+
+                <div className="space-y-2">
+                  {getTasksForDay(selectedDay.dayName).map((task, idx) => {
+                    const progress = taskProgress[task.id] || {};
+                    return (
+                      <div key={task.id} className="relative">
+                        <TaskItem
+                          task={{
+                            id: task.id,
+                            task: task.task,
+                            task_es: task.task_es,
+                            photo_required: task.photo_required,
+                            completed: progress.completed || false,
+                            photo_url: progress.photo_url,
+                            notes: progress.notes,
+                          }}
+                          index={idx}
+                          onToggle={handleTaskToggle}
+                          onPhotoUpload={(taskId, url) => {
+                            setTaskProgress((prev) => ({
+                              ...prev,
+                              [taskId]: { ...prev[taskId], photo_url: url },
+                            }));
+                          }}
+                          onPhotoRemove={(taskId) => handlePhotoRemove(taskId)}
+                          onNotesChange={(taskId, notes) =>
+                            handleTaskNotes(taskId, notes)
+                          }
+                          context="maintenance"
+                          showEstimate={true}
+                          estimatedMinutes={task.estimated_minutes}
+                        />
+                        {/* Priority and day badges */}
+                        <div className="absolute top-2 right-12 flex gap-1">
                           {getPriorityBadge(task.priority)}
                           {task.day === "daily" && (
                             <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">
@@ -1686,99 +2042,177 @@ export default function MaintenanceQCPage() {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 flex items-center gap-2">
-                          <span>⏱️ ~{task.estimated_minutes} min</span>
-                          {task.photo_required && (
-                            <span>📸 Foto requerida</span>
-                          )}
-                        </div>
+                        {isAdmin && task.id.startsWith("custom_") && (
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingTask(task);
+                                setShowEditTaskModal(true);
+                              }}
+                              className="p-1 text-blue-500 hover:bg-blue-50 rounded text-xs"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
                       </div>
+                    );
+                  })}
+                  {getTasksForDay(selectedDay.dayName).length === 0 && (
+                    <div className="text-center py-8 text-slate-400">
+                      No hay tareas programadas para este día
                     </div>
-                    {isAdmin && task.id.startsWith("custom_") && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => {
-                            setEditingTask(task);
-                            setShowEditTaskModal(true);
-                          }}
-                          className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {getTasksForDay(selectedDay.dayName).length === 0 && (
-                  <div className="text-center py-8 text-slate-400">
-                    No hay tareas programadas para este día
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* Submit button for daily tasks */}
+                {(() => {
+                  const tasks = getTasksForDay(selectedDay.dayName);
+                  const completed = tasks.filter(
+                    (t) => taskProgress[t.id]?.completed,
+                  ).length;
+                  const photosUploaded = tasks.filter(
+                    (t) => t.photo_required && taskProgress[t.id]?.photo_url,
+                  ).length;
+                  const photosRequired = tasks.filter(
+                    (t) => t.photo_required,
+                  ).length;
+                  const canSubmit =
+                    tasks.length > 0 &&
+                    completed === tasks.length &&
+                    photosUploaded >= photosRequired;
+
+                  return tasks.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        if (!canSubmit) {
+                          alert(
+                            completed < tasks.length
+                              ? `Completa todas las tareas (${completed}/${tasks.length})`
+                              : `Sube todas las fotos requeridas (${photosUploaded}/${photosRequired})`,
+                          );
+                          return;
+                        }
+                        alert(
+                          `✅ Tareas del ${selectedDay.dayNameEs} enviadas para aprobación`,
+                        );
+                      }}
+                      className={`mt-4 w-full py-3 rounded-xl font-bold text-sm transition-all ${
+                        canSubmit
+                          ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                          : "bg-slate-100 text-slate-400"
+                      }`}
+                    >
+                      {canSubmit
+                        ? "✅ Enviar para Aprobación"
+                        : `Completa ${tasks.length - completed} tareas`}
+                    </button>
+                  ) : null;
+                })()}
               </div>
 
-              {/* Weekly Tasks */}
-              <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                📆 Tareas Semanales
-              </h4>
-              <div className="space-y-2 mb-6">
-                {getWeeklyTasks().map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                        📆
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 flex items-center gap-2">
-                          {task.task_es}
-                          {getPriorityBadge(task.priority)}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          ⏱️ ~{task.estimated_minutes} min
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* Weekly Tasks - Interactive */}
+              <div className="bg-green-50 rounded-xl border border-green-200 p-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-green-700 uppercase tracking-wide flex items-center gap-2">
+                    📆 Tareas Semanales
+                  </h4>
+                  {(() => {
+                    const tasks = getWeeklyTasks();
+                    const completed = tasks.filter(
+                      (t) => taskProgress[`weekly_${t.id}`]?.completed,
+                    ).length;
+                    return (
+                      <span className="text-sm font-bold text-green-600">
+                        {completed}/{tasks.length}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  {getWeeklyTasks().map((task, idx) => {
+                    const progress = taskProgress[`weekly_${task.id}`] || {};
+                    return (
+                      <TaskItem
+                        key={task.id}
+                        task={{
+                          id: `weekly_${task.id}`,
+                          task: task.task,
+                          task_es: task.task_es,
+                          photo_required: task.photo_required,
+                          completed: progress.completed || false,
+                          photo_url: progress.photo_url,
+                          notes: progress.notes,
+                        }}
+                        index={idx}
+                        onToggle={handleTaskToggle}
+                        onPhotoUpload={(taskId, url) => {
+                          setTaskProgress((prev) => ({
+                            ...prev,
+                            [taskId]: { ...prev[taskId], photo_url: url },
+                          }));
+                        }}
+                        onPhotoRemove={handlePhotoRemove}
+                        onNotesChange={handleTaskNotes}
+                        context="maintenance"
+                        showEstimate={true}
+                        estimatedMinutes={task.estimated_minutes}
+                      />
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Monthly Tasks */}
-              <h4 className="text-sm font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                📅 Tareas Mensuales
-              </h4>
-              <div className="space-y-2">
-                {getMonthlyTasks().map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                        📅
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 flex items-center gap-2">
-                          {task.task_es}
-                          {getPriorityBadge(task.priority)}
-                          {task.photo_required && (
-                            <span className="text-amber-500">📸</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          ⏱️ ~{task.estimated_minutes} min
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* Monthly Tasks - Interactive */}
+              <div className="bg-orange-50 rounded-xl border border-orange-200 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wide flex items-center gap-2">
+                    📅 Tareas Mensuales
+                  </h4>
+                  {(() => {
+                    const tasks = getMonthlyTasks();
+                    const completed = tasks.filter(
+                      (t) => taskProgress[`monthly_${t.id}`]?.completed,
+                    ).length;
+                    return (
+                      <span className="text-sm font-bold text-orange-600">
+                        {completed}/{tasks.length}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  {getMonthlyTasks().map((task, idx) => {
+                    const progress = taskProgress[`monthly_${task.id}`] || {};
+                    return (
+                      <TaskItem
+                        key={task.id}
+                        task={{
+                          id: `monthly_${task.id}`,
+                          task: task.task,
+                          task_es: task.task_es,
+                          photo_required: task.photo_required,
+                          completed: progress.completed || false,
+                          photo_url: progress.photo_url,
+                          notes: progress.notes,
+                        }}
+                        index={idx}
+                        onToggle={handleTaskToggle}
+                        onPhotoUpload={(taskId, url) => {
+                          setTaskProgress((prev) => ({
+                            ...prev,
+                            [taskId]: { ...prev[taskId], photo_url: url },
+                          }));
+                        }}
+                        onPhotoRemove={handlePhotoRemove}
+                        onNotesChange={handleTaskNotes}
+                        context="maintenance"
+                        showEstimate={true}
+                        estimatedMinutes={task.estimated_minutes}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
