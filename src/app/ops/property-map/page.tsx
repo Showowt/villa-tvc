@@ -6,7 +6,7 @@ import { createBrowserClient } from "@/lib/supabase/client";
 // ═══════════════════════════════════════════════════════════════
 // TVC INTERACTIVE PROPERTY MAP — Production Component
 // Built from actual architectural plans (D. Arqui Restauro S.A.S)
-// Integrates with: checklists, occupancy, maintenance, guest data
+// Plano N: 02 DE 31 | Fecha 3/4/2020
 // ═══════════════════════════════════════════════════════════════
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,12 +14,13 @@ type SupabaseAny = any;
 
 interface Villa {
   id: number;
+  dbId: string;
   name: string;
   type: string;
   x: number;
   y: number;
   angle: number;
-  color: string;
+  labelColor: string;
   beds: number;
   sofa: boolean;
   maxGuests: number;
@@ -44,29 +45,33 @@ interface VillaStatus {
   vipLevel?: "standard" | "vip" | "vvip";
 }
 
-// Villa data from architectural plans — exact names and relative positions
+// Villa data from architectural plans — exact positions from blueprint
+// Positions based on D. Arqui Restauro S.A.S layout (viewBox 0 0 100 80)
 const VILLAS: Villa[] = [
+  // Top row near dock (north)
   {
     id: 1,
-    name: "Villa Aduana",
-    type: "Deluxe",
-    x: 48,
-    y: 14,
-    angle: -15,
-    color: "#FFD700",
+    dbId: "villa_1",
+    name: "Villa Teresa",
+    type: "Bungalow Tipo B",
+    x: 28,
+    y: 16,
+    angle: -25,
+    labelColor: "#F59E0B", // Yellow/Orange
     beds: 2,
-    sofa: true,
-    maxGuests: 5,
+    sofa: false,
+    maxGuests: 4,
     zone: "north",
   },
   {
     id: 2,
-    name: "Villa Trinidad",
-    type: "Deluxe",
-    x: 62,
-    y: 12,
+    dbId: "villa_2",
+    name: "Villa Aduana",
+    type: "Bungalow Tipo B",
+    x: 42,
+    y: 14,
     angle: -10,
-    color: "#FF6B6B",
+    labelColor: "#F97316", // Orange
     beds: 2,
     sofa: true,
     maxGuests: 5,
@@ -74,78 +79,86 @@ const VILLAS: Villa[] = [
   },
   {
     id: 3,
+    dbId: "villa_3",
+    name: "Villa Trinidad",
+    type: "Bungalow Tipo A",
+    x: 56,
+    y: 13,
+    angle: 0,
+    labelColor: "#EF4444", // Red
+    beds: 2,
+    sofa: true,
+    maxGuests: 5,
+    zone: "north",
+  },
+  // East side (right)
+  {
+    id: 4,
+    dbId: "villa_4",
     name: "Villa Paz",
-    type: "Garden View",
-    x: 74,
-    y: 16,
-    angle: 5,
-    color: "#DDA0DD",
+    type: "Bungalow Tipo A",
+    x: 78,
+    y: 20,
+    angle: 15,
+    labelColor: "#EC4899", // Pink
     beds: 2,
     sofa: false,
     maxGuests: 4,
     zone: "east",
   },
   {
-    id: 4,
+    id: 5,
+    dbId: "villa_5",
     name: "Villa San Pedro",
-    type: "Deluxe",
-    x: 80,
-    y: 26,
-    angle: 15,
-    color: "#FF69B4",
+    type: "Bungalow Tipo B",
+    x: 82,
+    y: 32,
+    angle: 20,
+    labelColor: "#EC4899", // Pink
     beds: 2,
     sofa: true,
     maxGuests: 5,
     zone: "east",
   },
   {
-    id: 5,
+    id: 6,
+    dbId: "villa_6",
     name: "Villa San Diego",
-    type: "Garden View",
-    x: 82,
-    y: 38,
-    angle: 20,
-    color: "#90EE90",
+    type: "Bungalow Tipo A",
+    x: 80,
+    y: 46,
+    angle: 10,
+    labelColor: "#A855F7", // Purple
     beds: 2,
     sofa: false,
     maxGuests: 4,
     zone: "east",
   },
   {
-    id: 6,
+    id: 7,
+    dbId: "villa_7",
     name: "Villa Coche",
-    type: "ADA Accessible",
-    x: 84,
-    y: 50,
+    type: "Bungalow Tipo C",
+    x: 76,
+    y: 60,
     angle: 0,
-    color: "#4169E1",
+    labelColor: "#EC4899", // Pink
     beds: 2,
     sofa: false,
     maxGuests: 4,
     zone: "south",
-    ada: true,
+    ada: true, // Accesibilidad reducida
   },
-  {
-    id: 7,
-    name: "Villa Teresa",
-    type: "Garden View",
-    x: 38,
-    y: 18,
-    angle: -20,
-    color: "#32CD32",
-    beds: 2,
-    sofa: false,
-    maxGuests: 4,
-    zone: "north",
-  },
+  // West side (left)
   {
     id: 8,
+    dbId: "villa_8",
     name: "Villa Pozo",
-    type: "Garden View",
-    x: 30,
+    type: "Bungalow Tipo B",
+    x: 22,
     y: 34,
-    angle: -10,
-    color: "#00CED1",
+    angle: -15,
+    labelColor: "#3B82F6", // Blue
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -153,12 +166,13 @@ const VILLAS: Villa[] = [
   },
   {
     id: 9,
+    dbId: "villa_9",
     name: "Villa Santo Domingo",
-    type: "Deluxe",
-    x: 36,
-    y: 48,
+    type: "Bungalow Tipo A",
+    x: 28,
+    y: 50,
     angle: -5,
-    color: "#FFA500",
+    labelColor: "#3B82F6", // Blue
     beds: 2,
     sofa: true,
     maxGuests: 5,
@@ -166,12 +180,13 @@ const VILLAS: Villa[] = [
   },
   {
     id: 10,
+    dbId: "villa_10",
     name: "Villa Merced",
-    type: "Garden View",
-    x: 34,
-    y: 58,
+    type: "Bungalow Tipo B",
+    x: 24,
+    y: 66,
     angle: 0,
-    color: "#FF4500",
+    labelColor: "#3B82F6", // Blue
     beds: 2,
     sofa: false,
     maxGuests: 4,
@@ -260,20 +275,6 @@ const CLEANING_STATUS = {
   },
 };
 
-// Villa ID mapping: DB villa_id -> component id
-const VILLA_ID_MAP: { [key: string]: number } = {
-  villa_1: 1,
-  villa_2: 2,
-  villa_3: 3,
-  villa_4: 4,
-  villa_5: 5,
-  villa_6: 6,
-  villa_7: 7,
-  villa_8: 8,
-  villa_9: 9,
-  villa_10: 10,
-};
-
 export default function TVCPropertyMap() {
   const [selected, setSelected] = useState<number | null>(null);
   const [filter, setFilter] = useState<string>("all");
@@ -284,12 +285,10 @@ export default function TVCPropertyMap() {
   }>({});
   const [loading, setLoading] = useState(true);
 
-  // Load data from Supabase
   const loadData = useCallback(async () => {
     const supabase = createBrowserClient() as SupabaseAny;
     const today = new Date().toISOString().split("T")[0];
 
-    // Load villa statuses and bookings
     const { data: statusData } = await supabase
       .from("villa_status")
       .select("*");
@@ -300,10 +299,8 @@ export default function TVCPropertyMap() {
       .lte("check_in", today)
       .gte("check_out", today);
 
-    // Build status map
     const newStatuses: { [key: number]: VillaStatus } = {};
 
-    // Initialize all villas as vacant
     VILLAS.forEach((v) => {
       newStatuses[v.id] = {
         status: "vacant",
@@ -316,7 +313,6 @@ export default function TVCPropertyMap() {
       };
     });
 
-    // Apply villa status from DB
     if (statusData) {
       statusData.forEach(
         (s: {
@@ -325,35 +321,31 @@ export default function TVCPropertyMap() {
           cleaning_status: string;
           maintenance_status: string;
         }) => {
-          const villaId = VILLA_ID_MAP[s.villa_id];
-          if (villaId && newStatuses[villaId]) {
-            // Map DB status to UI status
+          const villa = VILLAS.find((v) => v.dbId === s.villa_id);
+          if (villa && newStatuses[villa.id]) {
             if (s.status === "occupied")
-              newStatuses[villaId].status = "occupied";
+              newStatuses[villa.id].status = "occupied";
             else if (s.status === "cleaning")
-              newStatuses[villaId].status = "cleaning";
+              newStatuses[villa.id].status = "cleaning";
             else if (s.status === "maintenance")
-              newStatuses[villaId].status = "maintenance";
-            else newStatuses[villaId].status = "vacant";
+              newStatuses[villa.id].status = "maintenance";
+            else newStatuses[villa.id].status = "vacant";
 
-            // Map cleaning status
             if (s.cleaning_status === "dirty")
-              newStatuses[villaId].cleaning = "pending";
+              newStatuses[villa.id].cleaning = "pending";
             else if (s.cleaning_status === "in_progress")
-              newStatuses[villaId].cleaning = "in_progress";
+              newStatuses[villa.id].cleaning = "in_progress";
             else if (s.cleaning_status === "inspected")
-              newStatuses[villaId].cleaning = "submitted";
-            else newStatuses[villaId].cleaning = "approved";
+              newStatuses[villa.id].cleaning = "submitted";
+            else newStatuses[villa.id].cleaning = "approved";
 
-            // Map maintenance
             if (s.maintenance_status !== "ok")
-              newStatuses[villaId].maintenance = "ac_check";
+              newStatuses[villa.id].maintenance = "ac_check";
           }
         },
       );
     }
 
-    // Apply booking data
     if (bookingData) {
       bookingData.forEach(
         (b: {
@@ -366,29 +358,28 @@ export default function TVCPropertyMap() {
           status: string;
           vip_level?: string;
         }) => {
-          const villaId = VILLA_ID_MAP[b.villa_id];
-          if (villaId && newStatuses[villaId]) {
-            newStatuses[villaId].guests = b.guest_name;
-            newStatuses[villaId].guestCount = b.num_adults + b.num_children;
-            newStatuses[villaId].checkIn = new Date(
+          const villa = VILLAS.find((v) => v.dbId === b.villa_id);
+          if (villa && newStatuses[villa.id]) {
+            newStatuses[villa.id].guests = b.guest_name;
+            newStatuses[villa.id].guestCount = b.num_adults + b.num_children;
+            newStatuses[villa.id].checkIn = new Date(
               b.check_in,
             ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            newStatuses[villaId].checkOut = new Date(
+            newStatuses[villa.id].checkOut = new Date(
               b.check_out,
             ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            newStatuses[villaId].vipLevel =
+            newStatuses[villa.id].vipLevel =
               (b.vip_level as "standard" | "vip" | "vvip") || "standard";
 
-            // Check if arriving or leaving today
             const checkInDate = b.check_in.split("T")[0];
             const checkOutDate = b.check_out.split("T")[0];
 
             if (checkInDate === today && b.status === "confirmed") {
-              newStatuses[villaId].status = "arriving";
+              newStatuses[villa.id].status = "arriving";
             } else if (checkOutDate === today) {
-              newStatuses[villaId].status = "checkout";
+              newStatuses[villa.id].status = "checkout";
             } else if (b.status === "checked_in") {
-              newStatuses[villaId].status = "occupied";
+              newStatuses[villa.id].status = "occupied";
             }
           }
         },
@@ -401,8 +392,6 @@ export default function TVCPropertyMap() {
 
   useEffect(() => {
     loadData();
-
-    // Real-time updates
     const supabase = createBrowserClient() as SupabaseAny;
     const channel = supabase
       .channel("property-map-updates")
@@ -417,7 +406,6 @@ export default function TVCPropertyMap() {
         () => loadData(),
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -473,12 +461,11 @@ export default function TVCPropertyMap() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes ripple { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .villa-marker:hover { transform: scale(1.15); z-index: 100; }
-        .villa-marker { transition: transform 0.2s ease; cursor: pointer; }
+        .villa-marker { cursor: pointer; }
+        .villa-marker:hover .villa-bg { filter: brightness(1.1); }
+        .villa-marker:hover .villa-label { font-weight: 900; }
       `}</style>
 
       {/* Header */}
@@ -646,19 +633,18 @@ export default function TVCPropertyMap() {
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           <svg
             viewBox="0 0 100 80"
+            preserveAspectRatio="xMidYMid meet"
             style={{
               width: "100%",
               height: "100%",
               background:
                 "linear-gradient(180deg, #E8F0E4 0%, #D4E4D0 50%, #C8D8C4 100%)",
             }}
-            xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Water / Ocean edges */}
             <defs>
               <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4FA8D1" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#2E86AB" stopOpacity="0.5" />
+                <stop offset="0%" stopColor="#4FA8D1" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#2E86AB" stopOpacity="0.6" />
               </linearGradient>
               <linearGradient id="pool" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#38BDF8" />
@@ -667,399 +653,313 @@ export default function TVCPropertyMap() {
               <pattern
                 id="grass"
                 patternUnits="userSpaceOnUse"
-                width="4"
-                height="4"
+                width="3"
+                height="3"
               >
-                <circle cx="1" cy="1" r="0.3" fill="#6B8E5A" opacity="0.15" />
-                <circle cx="3" cy="3" r="0.3" fill="#5A7D4A" opacity="0.1" />
+                <circle cx="1" cy="1" r="0.2" fill="#6B8E5A" opacity="0.12" />
               </pattern>
-              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
                 <feDropShadow
-                  dx="0.3"
-                  dy="0.3"
-                  stdDeviation="0.5"
-                  floodOpacity="0.2"
+                  dx="0.2"
+                  dy="0.2"
+                  stdDeviation="0.3"
+                  floodOpacity="0.15"
                 />
               </filter>
             </defs>
 
-            {/* Island outline */}
+            {/* Island shape */}
             <path
-              d="M 10 5 Q 30 2, 55 4 Q 75 3, 90 8 Q 95 15, 92 30 Q 93 45, 90 55 Q 88 65, 80 70 Q 65 78, 45 75 Q 25 73, 15 68 Q 8 60, 6 45 Q 5 25, 10 5 Z"
+              d="M 8 8 Q 30 4, 55 5 Q 80 4, 92 10 Q 96 20, 94 40 Q 95 55, 90 65 Q 82 74, 60 76 Q 35 78, 18 72 Q 8 65, 6 50 Q 4 30, 8 8 Z"
               fill="url(#grass)"
-              stroke="#8BA87A"
-              strokeWidth="0.3"
-              opacity="0.5"
-            />
-
-            {/* Pathways */}
-            <path
-              d="M 50 72 Q 50 65, 52 55 Q 54 45, 55 38 Q 56 30, 52 22 Q 48 15, 50 8"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="1.2"
-              strokeDasharray="0"
+              stroke="#7A9E6A"
+              strokeWidth="0.4"
               opacity="0.6"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 52 38 Q 60 35, 70 30 Q 78 27, 82 30"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 52 38 Q 42 35, 35 30 Q 30 28, 30 34"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 54 48 Q 65 48, 80 48"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 50 55 Q 40 55, 34 58"
-              fill="none"
-              stroke="#C4A882"
-              strokeWidth="0.8"
-              opacity="0.5"
-              strokeLinecap="round"
             />
 
-            {/* Dock (Muelle) */}
+            {/* Water around island */}
             <rect
-              x="46"
-              y="3"
-              width="8"
-              height="3"
-              rx="0.5"
-              fill="#8B7355"
-              stroke="#6B5335"
-              strokeWidth="0.2"
-            />
-            <line
-              x1="48"
-              y1="3"
-              x2="48"
-              y2="1"
-              stroke="#6B5335"
-              strokeWidth="0.3"
-            />
-            <line
-              x1="52"
-              y1="3"
-              x2="52"
-              y2="1"
-              stroke="#6B5335"
-              strokeWidth="0.3"
-            />
-            <rect
-              x="46"
-              y="1"
-              width="8"
-              height="2"
+              x="0"
+              y="0"
+              width="100"
+              height="6"
               fill="url(#water)"
-              rx="0.3"
-              opacity="0.6"
+              opacity="0.5"
             />
-            <text
-              x="50"
-              y="2.5"
-              textAnchor="middle"
-              fontSize="1.4"
-              fill="#4A3520"
-              fontWeight="700"
-              fontFamily="DM Sans"
-            >
-              MUELLE
-            </text>
-            <text
-              x="50"
-              y="5"
-              textAnchor="middle"
-              fontSize="1"
-              fill="#8B7355"
-              fontFamily="DM Sans"
-            >
-              Dock
-            </text>
 
-            {/* Trees/vegetation (scattered) */}
-            {[
-              [12, 15],
-              [15, 25],
-              [8, 40],
-              [12, 55],
-              [18, 65],
-              [85, 15],
-              [88, 35],
-              [87, 55],
-              [25, 10],
-              [75, 65],
-              [20, 45],
-              [78, 60],
-              [42, 70],
-              [60, 68],
-              [15, 35],
-            ].map(([tx, ty], i) => (
-              <g key={`tree-${i}`}>
-                <circle
-                  cx={tx}
-                  cy={ty}
-                  r={1.8 + (i % 3) * 0.3}
-                  fill="#4A7A3A"
-                  opacity={0.25 + (i % 4) * 0.05}
-                />
-                <circle
-                  cx={tx + 0.5}
-                  cy={ty - 0.3}
-                  r={1.2 + (i % 3) * 0.2}
-                  fill="#5A8A4A"
-                  opacity={0.2 + (i % 3) * 0.05}
-                />
-              </g>
-            ))}
-
-            {/* Palm trees */}
-            {[
-              [45, 20],
-              [55, 25],
-              [60, 15],
-              [40, 40],
-              [65, 45],
-              [30, 50],
-              [70, 55],
-              [48, 60],
-            ].map(([px, py], i) => (
-              <g key={`palm-${i}`}>
-                <line
-                  x1={px}
-                  y1={py}
-                  x2={px + 0.3}
-                  y2={py - 2}
-                  stroke="#8B7355"
-                  strokeWidth="0.3"
-                />
-                <ellipse
-                  cx={px + 0.3}
-                  cy={py - 2.5}
-                  rx="1.5"
-                  ry="0.8"
-                  fill="#3D7A2A"
-                  opacity="0.4"
-                  transform={`rotate(${i * 25}, ${px}, ${py - 2.5})`}
-                />
-              </g>
-            ))}
-
-            {/* Central Building Complex */}
+            {/* Dock (Muelle Existente) */}
             <g filter="url(#shadow)">
-              {/* Main house/restaurant/bar */}
               <rect
                 x="44"
-                y="30"
-                width="16"
-                height="14"
-                rx="0.8"
-                fill="#E8DCC8"
-                stroke="#B8A888"
+                y="2"
+                width="12"
+                height="4"
+                rx="0.3"
+                fill="#8B7355"
+                stroke="#6B5335"
+                strokeWidth="0.2"
+              />
+              <line
+                x1="47"
+                y1="2"
+                x2="47"
+                y2="0"
+                stroke="#6B5335"
                 strokeWidth="0.3"
               />
+              <line
+                x1="53"
+                y1="2"
+                x2="53"
+                y2="0"
+                stroke="#6B5335"
+                strokeWidth="0.3"
+              />
+              <text
+                x="50"
+                y="4.5"
+                textAnchor="middle"
+                fontSize="1.2"
+                fill="#4A3520"
+                fontWeight="700"
+              >
+                MUELLE
+              </text>
+            </g>
+
+            {/* Pathways (Caminos) */}
+            <path
+              d="M 50 6 Q 50 15, 50 30 Q 50 45, 50 60 Q 50 68, 60 72"
+              fill="none"
+              stroke="#C4A882"
+              strokeWidth="1"
+              opacity="0.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 50 30 Q 35 30, 25 35"
+              fill="none"
+              stroke="#C4A882"
+              strokeWidth="0.8"
+              opacity="0.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 50 30 Q 65 32, 78 35"
+              fill="none"
+              stroke="#C4A882"
+              strokeWidth="0.8"
+              opacity="0.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 50 50 Q 35 52, 26 55"
+              fill="none"
+              stroke="#C4A882"
+              strokeWidth="0.8"
+              opacity="0.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 50 50 Q 65 52, 75 58"
+              fill="none"
+              stroke="#C4A882"
+              strokeWidth="0.8"
+              opacity="0.4"
+              strokeLinecap="round"
+            />
+
+            {/* Central Building Complex (Casa Principal) */}
+            <g filter="url(#shadow)">
+              {/* Main building - Restaurant/Bar */}
               <rect
-                x="45"
-                y="31"
+                x="42"
+                y="32"
+                width="16"
+                height="12"
+                rx="0.5"
+                fill="#E8DCC8"
+                stroke="#B8A888"
+                strokeWidth="0.25"
+              />
+              <rect
+                x="43"
+                y="33"
                 width="14"
-                height="5"
+                height="4"
                 rx="0.3"
                 fill="#D4C8B4"
                 stroke="#B8A888"
                 strokeWidth="0.15"
               />
               <text
-                x="52"
-                y="34"
+                x="50"
+                y="35.5"
                 textAnchor="middle"
-                fontSize="1.3"
+                fontSize="1.1"
                 fill="#4A3520"
                 fontWeight="800"
-                fontFamily="DM Sans"
               >
-                TIA&apos;S COCINA
+                RESTAURANTE
               </text>
               <text
-                x="52"
-                y="35.5"
-                textAnchor="middle"
-                fontSize="0.9"
-                fill="#8B7355"
-                fontFamily="DM Sans"
-              >
-                Restaurant &amp; Bar
-              </text>
-
-              {/* Kitchen */}
-              <rect
-                x="45"
-                y="37"
-                width="6"
-                height="4"
-                rx="0.3"
-                fill="#DDD0BC"
-                stroke="#B8A888"
-                strokeWidth="0.15"
-              />
-              <text
-                x="48"
-                y="39.5"
-                textAnchor="middle"
-                fontSize="0.9"
-                fill="#6B5335"
-                fontWeight="600"
-                fontFamily="DM Sans"
-              >
-                KITCHEN
-              </text>
-
-              {/* Front desk */}
-              <rect
-                x="52"
-                y="37"
-                width="6"
-                height="4"
-                rx="0.3"
-                fill="#DDD0BC"
-                stroke="#B8A888"
-                strokeWidth="0.15"
-              />
-              <text
-                x="55"
-                y="39"
+                x="50"
+                y="36.8"
                 textAnchor="middle"
                 fontSize="0.8"
                 fill="#6B5335"
-                fontWeight="600"
-                fontFamily="DM Sans"
               >
-                FRONT
-              </text>
-              <text
-                x="55"
-                y="40"
-                textAnchor="middle"
-                fontSize="0.8"
-                fill="#6B5335"
-                fontWeight="600"
-                fontFamily="DM Sans"
-              >
-                DESK
+                &amp; BAR
               </text>
 
-              {/* Stairs to mirador */}
+              {/* Reception */}
               <rect
-                x="60"
-                y="33"
-                width="3"
+                x="43"
+                y="38"
+                width="6"
                 height="4"
                 rx="0.2"
-                fill="#C8B898"
+                fill="#DDD0BC"
                 stroke="#B8A888"
-                strokeWidth="0.15"
+                strokeWidth="0.1"
               />
               <text
-                x="61.5"
-                y="35.5"
+                x="46"
+                y="40.5"
                 textAnchor="middle"
                 fontSize="0.7"
                 fill="#6B5335"
                 fontWeight="600"
-                fontFamily="DM Sans"
               >
-                ↑ MIRADOR
+                RECEPCIÓN
+              </text>
+
+              {/* Terraza */}
+              <rect
+                x="50"
+                y="38"
+                width="6"
+                height="4"
+                rx="0.2"
+                fill="#DDD0BC"
+                stroke="#B8A888"
+                strokeWidth="0.1"
+              />
+              <text
+                x="53"
+                y="40.5"
+                textAnchor="middle"
+                fontSize="0.7"
+                fill="#6B5335"
+                fontWeight="600"
+              >
+                TERRAZA
               </text>
             </g>
 
-            {/* Pool Area */}
+            {/* Pool (Piscina) */}
             <rect
-              x="56"
-              y="25"
+              x="60"
+              y="34"
               width="10"
               height="6"
-              rx="1"
+              rx="0.8"
               fill="url(#pool)"
               stroke="#0EA5E9"
-              strokeWidth="0.3"
+              strokeWidth="0.25"
             />
             <text
-              x="61"
-              y="28.5"
+              x="65"
+              y="37.8"
               textAnchor="middle"
-              fontSize="1.4"
+              fontSize="1.2"
               fill="#FFF"
               fontWeight="800"
-              fontFamily="DM Sans"
-              opacity="0.8"
+              opacity="0.9"
             >
               PISCINA
             </text>
-            {/* Jacuzzi */}
-            <circle
-              cx="58"
-              cy="32"
-              r="1.5"
-              fill="#38BDF8"
-              stroke="#0EA5E9"
-              strokeWidth="0.2"
+
+            {/* Lounge next to pool */}
+            <rect
+              x="60"
+              y="41"
+              width="5"
+              height="3"
+              rx="0.3"
+              fill="#E8DCC8"
+              stroke="#B8A888"
+              strokeWidth="0.15"
               opacity="0.8"
             />
             <text
-              x="58"
-              y="32.3"
+              x="62.5"
+              y="43"
               textAnchor="middle"
-              fontSize="0.7"
-              fill="#FFF"
-              fontWeight="700"
-              fontFamily="DM Sans"
-            >
-              HOT TUB
-            </text>
-
-            {/* Lounge area */}
-            <rect
-              x="50"
-              y="24"
-              width="6"
-              height="4"
-              rx="0.5"
-              fill="#E8DCC8"
-              stroke="#B8A888"
-              strokeWidth="0.2"
-              opacity="0.7"
-            />
-            <text
-              x="53"
-              y="26.5"
-              textAnchor="middle"
-              fontSize="0.9"
+              fontSize="0.6"
               fill="#6B5335"
               fontWeight="600"
-              fontFamily="DM Sans"
             >
               LOUNGE
             </text>
 
-            {/* Bathroom block */}
-            <rect
+            {/* Admin & Taller */}
+            <g filter="url(#shadow)">
+              <rect
+                x="38"
+                y="48"
+                width="8"
+                height="5"
+                rx="0.4"
+                fill="#D4C8B4"
+                stroke="#B8A888"
+                strokeWidth="0.2"
+              />
+              <text
+                x="42"
+                y="50.5"
+                textAnchor="middle"
+                fontSize="0.7"
+                fill="#6B5335"
+                fontWeight="600"
+              >
+                ADMIN
+              </text>
+              <text
+                x="42"
+                y="51.6"
+                textAnchor="middle"
+                fontSize="0.6"
+                fill="#6B5335"
+              >
+                &amp; TALLER
+              </text>
+            </g>
+
+            {/* Kiosko */}
+            <circle
+              cx="68"
+              cy="55"
+              r="2.5"
+              fill="#D4C8B4"
+              stroke="#B8A888"
+              strokeWidth="0.2"
+            />
+            <text
               x="68"
-              y="42"
+              y="55.4"
+              textAnchor="middle"
+              fontSize="0.8"
+              fill="#6B5335"
+              fontWeight="700"
+            >
+              KIOSKO
+            </text>
+
+            {/* Baños (16) */}
+            <rect
+              x="55"
+              y="54"
               width="4"
               height="3"
               rx="0.3"
@@ -1068,41 +968,40 @@ export default function TVCPropertyMap() {
               strokeWidth="0.15"
             />
             <text
-              x="70"
-              y="44"
+              x="57"
+              y="56"
               textAnchor="middle"
-              fontSize="0.7"
+              fontSize="0.6"
               fill="#6B5335"
               fontWeight="600"
-              fontFamily="DM Sans"
             >
               BAÑOS
             </text>
 
-            {/* Kiosco */}
-            <circle
-              cx="76"
-              cy="62"
-              r="2.5"
-              fill="#D4C8B4"
+            {/* Escalera a Mirador */}
+            <rect
+              x="58"
+              y="32"
+              width="2"
+              height="3"
+              rx="0.15"
+              fill="#C8B898"
               stroke="#B8A888"
-              strokeWidth="0.2"
+              strokeWidth="0.1"
             />
             <text
-              x="76"
-              y="62.3"
+              x="59"
+              y="34"
               textAnchor="middle"
-              fontSize="0.9"
+              fontSize="0.5"
               fill="#6B5335"
-              fontWeight="700"
-              fontFamily="DM Sans"
             >
-              KIOSKO
+              ↑
             </text>
 
-            {/* Via de acceso */}
+            {/* Via de Acceso */}
             <path
-              d="M 78 68 Q 82 70, 90 72"
+              d="M 75 68 Q 82 70, 92 72"
               fill="none"
               stroke="#C4A882"
               strokeWidth="1.5"
@@ -1110,49 +1009,71 @@ export default function TVCPropertyMap() {
               strokeLinecap="round"
             />
             <text
-              x="86"
-              y="71"
-              fontSize="0.9"
+              x="85"
+              y="70"
+              fontSize="0.8"
               fill="#8B7355"
-              fontFamily="DM Sans"
-              transform="rotate(10, 86, 71)"
+              transform="rotate(8, 85, 70)"
             >
               VÍA DE ACCESO
             </text>
 
-            {/* Admin building */}
-            <rect
-              x="28"
-              y="62"
-              width="6"
-              height="5"
-              rx="0.5"
-              fill="#D4C8B4"
-              stroke="#B8A888"
-              strokeWidth="0.2"
-            />
-            <text
-              x="31"
-              y="64.5"
-              textAnchor="middle"
-              fontSize="0.7"
-              fill="#6B5335"
-              fontWeight="600"
-              fontFamily="DM Sans"
-            >
-              ADMIN
-            </text>
-            <text
-              x="31"
-              y="65.5"
-              textAnchor="middle"
-              fontSize="0.7"
-              fill="#6B5335"
-              fontWeight="600"
-              fontFamily="DM Sans"
-            >
-              &amp; TALLER
-            </text>
+            {/* Trees and vegetation */}
+            {[
+              [15, 12],
+              [12, 25],
+              [10, 45],
+              [15, 58],
+              [8, 68],
+              [88, 12],
+              [90, 30],
+              [88, 48],
+              [85, 68],
+              [35, 8],
+              [65, 8],
+              [75, 70],
+              [20, 75],
+            ].map(([tx, ty], i) => (
+              <g key={`tree-${i}`}>
+                <circle
+                  cx={tx}
+                  cy={ty}
+                  r={1.5 + (i % 2) * 0.5}
+                  fill="#4A7A3A"
+                  opacity={0.2 + (i % 3) * 0.05}
+                />
+              </g>
+            ))}
+
+            {/* Palm trees */}
+            {[
+              [38, 25],
+              [62, 25],
+              [72, 28],
+              [28, 42],
+              [72, 48],
+              [55, 65],
+              [32, 72],
+            ].map(([px, py], i) => (
+              <g key={`palm-${i}`}>
+                <line
+                  x1={px}
+                  y1={py}
+                  x2={px}
+                  y2={py - 1.5}
+                  stroke="#8B7355"
+                  strokeWidth="0.25"
+                />
+                <ellipse
+                  cx={px}
+                  cy={py - 2}
+                  rx="1.2"
+                  ry="0.6"
+                  fill="#3D7A2A"
+                  opacity="0.35"
+                />
+              </g>
+            ))}
 
             {/* Villa markers */}
             {filteredVillas.map((villa) => {
@@ -1174,23 +1095,23 @@ export default function TVCPropertyMap() {
                     setSelected(villa.id);
                     setShowPanel(true);
                   }}
-                  style={{ opacity: isFiltered ? 0.2 : 1 }}
+                  style={{ opacity: isFiltered ? 0.25 : 1 }}
                 >
                   {/* Pulse ring for active statuses */}
                   {cfg.pulse && !isFiltered && (
                     <circle
                       cx={villa.x}
                       cy={villa.y}
-                      r="3.5"
+                      r="4"
                       fill="none"
                       stroke={cfg.color}
-                      strokeWidth="0.3"
-                      opacity="0.4"
+                      strokeWidth="0.25"
+                      opacity="0.5"
                     >
                       <animate
                         attributeName="r"
                         from="3"
-                        to="5"
+                        to="5.5"
                         dur="2s"
                         repeatCount="indefinite"
                       />
@@ -1209,103 +1130,91 @@ export default function TVCPropertyMap() {
                     <circle
                       cx={villa.x}
                       cy={villa.y}
-                      r="4.5"
+                      r="5"
                       fill="none"
                       stroke="#0A0A0F"
-                      strokeWidth="0.4"
+                      strokeWidth="0.35"
                       strokeDasharray="1,0.5"
-                    />
+                    >
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        from="0"
+                        to="3"
+                        dur="0.5s"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
                   )}
 
-                  {/* Villa building shape */}
+                  {/* Villa building - using villa's label color */}
                   <rect
+                    className="villa-bg"
                     x={villa.x - 3}
                     y={villa.y - 2}
                     width="6"
                     height="4"
-                    rx="0.6"
-                    fill={cfg.bg}
-                    stroke={cfg.border}
+                    rx="0.4"
+                    fill={s.status === "vacant" ? "#F8FAFC" : cfg.bg}
+                    stroke={villa.labelColor}
                     strokeWidth={isSelected ? "0.5" : "0.3"}
                     transform={`rotate(${villa.angle}, ${villa.x}, ${villa.y})`}
+                    style={{ transition: "filter 0.2s ease" }}
                   />
 
-                  {/* Patio indicator */}
-                  <rect
-                    x={villa.x - 1.5}
-                    y={villa.y + 1.5}
-                    width="3"
-                    height="1.5"
-                    rx="0.2"
-                    fill={cfg.bg}
-                    stroke={cfg.border}
-                    strokeWidth="0.15"
-                    opacity="0.6"
-                    transform={`rotate(${villa.angle}, ${villa.x}, ${villa.y})`}
-                  />
-
-                  {/* Status dot */}
+                  {/* Status indicator dot */}
                   <circle
-                    cx={villa.x + 2.5}
-                    cy={villa.y - 1.5}
-                    r="0.8"
+                    cx={villa.x + 2.2}
+                    cy={villa.y - 1.2}
+                    r="0.7"
                     fill={cfg.color}
                     stroke="#FFF"
-                    strokeWidth="0.2"
+                    strokeWidth="0.15"
                   />
 
-                  {/* Villa name label */}
+                  {/* Villa name label background */}
                   <rect
-                    x={villa.x - 4.5}
-                    y={villa.y + 3.5}
-                    width="9"
-                    height="2.2"
-                    rx="0.4"
-                    fill="#FFF"
-                    stroke="#E2E8F0"
-                    strokeWidth="0.15"
+                    x={villa.x - 5.5}
+                    y={villa.y + 2.5}
+                    width="11"
+                    height="2.8"
+                    rx="0.3"
+                    fill={villa.labelColor}
+                    stroke={villa.labelColor}
+                    strokeWidth="0.1"
                     opacity="0.95"
                   />
+
+                  {/* Villa name */}
                   <text
+                    className="villa-label"
                     x={villa.x}
-                    y={villa.y + 4.6}
+                    y={villa.y + 4.2}
                     textAnchor="middle"
-                    fontSize="1"
-                    fontWeight="800"
-                    fill="#0A0A0F"
+                    fontSize="1.1"
+                    fontWeight="700"
+                    fill="#FFF"
                     fontFamily="DM Sans"
+                    style={{ transition: "font-weight 0.15s ease" }}
                   >
                     {villa.name.replace("Villa ", "")}
-                  </text>
-                  <text
-                    x={villa.x}
-                    y={villa.y + 5.4}
-                    textAnchor="middle"
-                    fontSize="0.7"
-                    fontWeight="600"
-                    fill={cfg.color}
-                    fontFamily="DM Sans"
-                  >
-                    {cfg.label}
                   </text>
 
                   {/* Guest count badge */}
                   {s.guestCount > 0 && (
                     <g>
                       <circle
-                        cx={villa.x - 2.5}
-                        cy={villa.y - 1.5}
-                        r="0.9"
+                        cx={villa.x - 2.2}
+                        cy={villa.y - 1.2}
+                        r="0.8"
                         fill="#0A0A0F"
                       />
                       <text
-                        x={villa.x - 2.5}
-                        y={villa.y - 1.2}
+                        x={villa.x - 2.2}
+                        y={villa.y - 0.9}
                         textAnchor="middle"
-                        fontSize="0.8"
+                        fontSize="0.75"
                         fill="#FFF"
                         fontWeight="800"
-                        fontFamily="DM Sans"
                       >
                         {s.guestCount}
                       </text>
@@ -1316,21 +1225,20 @@ export default function TVCPropertyMap() {
                   {s.vipLevel && s.vipLevel !== "standard" && (
                     <g>
                       <rect
-                        x={villa.x + 1}
-                        y={villa.y - 3.5}
-                        width="3"
-                        height="1.2"
-                        rx="0.3"
+                        x={villa.x + 0.5}
+                        y={villa.y - 3.2}
+                        width="2.8"
+                        height="1.1"
+                        rx="0.25"
                         fill={s.vipLevel === "vvip" ? "#F59E0B" : "#8B5CF6"}
                       />
                       <text
-                        x={villa.x + 2.5}
-                        y={villa.y - 2.6}
+                        x={villa.x + 1.9}
+                        y={villa.y - 2.4}
                         textAnchor="middle"
-                        fontSize="0.7"
+                        fontSize="0.6"
                         fill="#FFF"
                         fontWeight="800"
-                        fontFamily="DM Sans"
                       >
                         {s.vipLevel.toUpperCase()}
                       </text>
@@ -1341,9 +1249,9 @@ export default function TVCPropertyMap() {
                   {villa.ada && (
                     <text
                       x={villa.x}
-                      y={villa.y + 0.3}
+                      y={villa.y + 0.4}
                       textAnchor="middle"
-                      fontSize="1.5"
+                      fontSize="1.3"
                     >
                       ♿
                     </text>
@@ -1358,55 +1266,53 @@ export default function TVCPropertyMap() {
                 r="2.5"
                 fill="#FFF"
                 stroke="#333"
-                strokeWidth="0.15"
+                strokeWidth="0.12"
                 opacity="0.9"
               />
-              <path d="M 0,-2 L 0.5,0.5 L 0,0 L -0.5,0.5 Z" fill="#333" />
+              <path d="M 0,-1.8 L 0.4,0.3 L 0,0 L -0.4,0.3 Z" fill="#333" />
               <text
-                y="-1"
+                y="-0.8"
                 textAnchor="middle"
-                fontSize="0.9"
+                fontSize="0.8"
                 fill="#333"
                 fontWeight="800"
-                fontFamily="DM Sans"
               >
                 N
               </text>
             </g>
 
             {/* Scale */}
-            <g transform="translate(8, 75)">
+            <g transform="translate(8, 76)">
               <line
                 x1="0"
                 y1="0"
                 x2="8"
                 y2="0"
                 stroke="#333"
-                strokeWidth="0.2"
+                strokeWidth="0.15"
               />
               <line
                 x1="0"
-                y1="-0.3"
+                y1="-0.25"
                 x2="0"
-                y2="0.3"
+                y2="0.25"
                 stroke="#333"
-                strokeWidth="0.2"
+                strokeWidth="0.15"
               />
               <line
                 x1="8"
-                y1="-0.3"
+                y1="-0.25"
                 x2="8"
-                y2="0.3"
+                y2="0.25"
                 stroke="#333"
-                strokeWidth="0.2"
+                strokeWidth="0.15"
               />
               <text
                 x="4"
-                y="-0.5"
+                y="-0.4"
                 textAnchor="middle"
-                fontSize="0.8"
+                fontSize="0.7"
                 fill="#333"
-                fontFamily="DM Sans"
               >
                 ~50m
               </text>
@@ -1420,10 +1326,10 @@ export default function TVCPropertyMap() {
               bottom: 12,
               left: 12,
               background: "rgba(255,255,255,0.95)",
-              borderRadius: 12,
+              borderRadius: 10,
               padding: "10px 14px",
               border: "1px solid #E2E8F0",
-              backdropFilter: "blur(10px)",
+              backdropFilter: "blur(8px)",
               fontSize: 10,
             }}
           >
@@ -1435,7 +1341,7 @@ export default function TVCPropertyMap() {
                 fontSize: 11,
               }}
             >
-              VILLA STATUS
+              ESTADO VILLAS
             </div>
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
               <div
@@ -1456,7 +1362,7 @@ export default function TVCPropertyMap() {
                   }}
                 />
                 <span style={{ color: "#333", fontWeight: 600 }}>
-                  {cfg.label}
+                  {cfg.labelEs}
                 </span>
               </div>
             ))}
@@ -1474,10 +1380,9 @@ export default function TVCPropertyMap() {
               animation: "slideIn 0.3s ease",
             }}
           >
-            {/* Villa header */}
             <div
               style={{
-                background: `linear-gradient(135deg, ${STATUS_CONFIG[sel.status.status].color}15, ${STATUS_CONFIG[sel.status.status].color}05)`,
+                background: `linear-gradient(135deg, ${sel.villa.labelColor}20, ${sel.villa.labelColor}08)`,
                 padding: 20,
                 borderBottom: "1px solid #E2E8F0",
               }}
@@ -1496,7 +1401,7 @@ export default function TVCPropertyMap() {
                     {sel.villa.name}
                   </div>
                   <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-                    {sel.villa.type} • {sel.villa.maxGuests} guests max
+                    {sel.villa.type} • Max {sel.villa.maxGuests} huéspedes
                   </div>
                 </div>
                 <button
@@ -1535,12 +1440,11 @@ export default function TVCPropertyMap() {
                     color: STATUS_CONFIG[sel.status.status].color,
                   }}
                 >
-                  {STATUS_CONFIG[sel.status.status].label}
+                  {STATUS_CONFIG[sel.status.status].labelEs}
                 </span>
               </div>
             </div>
 
-            {/* Guest info */}
             {sel.status.guests && (
               <div
                 style={{
@@ -1557,7 +1461,7 @@ export default function TVCPropertyMap() {
                     marginBottom: 8,
                   }}
                 >
-                  GUEST INFORMATION
+                  INFORMACIÓN HUÉSPED
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div
@@ -1589,7 +1493,7 @@ export default function TVCPropertyMap() {
                     <div
                       style={{ fontSize: 9, color: "#94A3B8", fontWeight: 600 }}
                     >
-                      GUESTS
+                      HUÉSPEDES
                     </div>
                     <div
                       style={{
@@ -1637,7 +1541,6 @@ export default function TVCPropertyMap() {
               </div>
             )}
 
-            {/* Cleaning Status */}
             <div
               style={{
                 padding: "16px 20px",
@@ -1653,7 +1556,7 @@ export default function TVCPropertyMap() {
                   marginBottom: 8,
                 }}
               >
-                CLEANING STATUS
+                ESTADO LIMPIEZA
               </div>
               <div
                 style={{
@@ -1681,12 +1584,11 @@ export default function TVCPropertyMap() {
                     color: CLEANING_STATUS[sel.status.cleaning].color,
                   }}
                 >
-                  {CLEANING_STATUS[sel.status.cleaning].label}
+                  {CLEANING_STATUS[sel.status.cleaning].labelEs}
                 </span>
               </div>
             </div>
 
-            {/* Maintenance */}
             <div
               style={{
                 padding: "16px 20px",
@@ -1702,13 +1604,13 @@ export default function TVCPropertyMap() {
                   marginBottom: 8,
                 }}
               >
-                MAINTENANCE
+                MANTENIMIENTO
               </div>
               {sel.status.maintenance === "ok" ? (
                 <div
                   style={{ fontSize: 13, color: "#10B981", fontWeight: 700 }}
                 >
-                  ✅ All systems operational
+                  ✅ Todos los sistemas operativos
                 </div>
               ) : (
                 <div
@@ -1722,12 +1624,11 @@ export default function TVCPropertyMap() {
                     fontWeight: 600,
                   }}
                 >
-                  ⚠️ AC check needed — reported sluggish
+                  ⚠️ Revisión de AC necesaria
                 </div>
               )}
             </div>
 
-            {/* Villa specs */}
             <div
               style={{
                 padding: "16px 20px",
@@ -1743,7 +1644,7 @@ export default function TVCPropertyMap() {
                   marginBottom: 8,
                 }}
               >
-                VILLA SPECS
+                ESPECIFICACIONES
               </div>
               <div
                 style={{
@@ -1753,10 +1654,10 @@ export default function TVCPropertyMap() {
                 }}
               >
                 {[
-                  ["🛏️ Beds", `${sel.villa.beds} double`],
-                  ["🛋️ Sofa Bed", sel.villa.sofa ? "Yes" : "No"],
-                  ["👥 Capacity", `${sel.villa.maxGuests} guests`],
-                  ["📍 Zone", sel.villa.zone.toUpperCase()],
+                  ["🛏️ Camas", `${sel.villa.beds} dobles`],
+                  ["🛋️ Sofá Cama", sel.villa.sofa ? "Sí" : "No"],
+                  ["👥 Capacidad", `${sel.villa.maxGuests} huéspedes`],
+                  ["📍 Zona", sel.villa.zone.toUpperCase()],
                 ].map(([label, val]) => (
                   <div key={String(label)}>
                     <div style={{ fontSize: 9, color: "#94A3B8" }}>{label}</div>
@@ -1785,12 +1686,11 @@ export default function TVCPropertyMap() {
                     fontWeight: 700,
                   }}
                 >
-                  ♿ ADA Accessible — Wheelchair accessible, single-story
+                  ♿ Accesibilidad Reducida — Acceso para silla de ruedas
                 </div>
               )}
             </div>
 
-            {/* Action buttons */}
             <div style={{ padding: "16px 20px" }}>
               <div
                 style={{
@@ -1801,22 +1701,25 @@ export default function TVCPropertyMap() {
                   marginBottom: 10,
                 }}
               >
-                QUICK ACTIONS
+                ACCIONES RÁPIDAS
               </div>
               {[
                 {
-                  label: "🧹 Start Cleaning Checklist",
+                  label: "🧹 Iniciar Checklist Limpieza",
                   color: "#F59E0B",
                   href: "/ops/housekeeping",
                 },
                 {
-                  label: "🔧 Report Maintenance Issue",
+                  label: "🔧 Reportar Mantenimiento",
                   color: "#8B5CF6",
                   href: "/ops/maintenance",
                 },
-                { label: "📋 View Guest Details", color: "#0066CC", href: "#" },
-                { label: "💬 Message Guest", color: "#10B981", href: "#" },
-                { label: "📊 Villa History", color: "#64748B", href: "#" },
+                {
+                  label: "📋 Ver Detalles Huésped",
+                  color: "#0066CC",
+                  href: "/ops/villa-map",
+                },
+                { label: "💬 Contactar Huésped", color: "#10B981", href: "#" },
               ].map((btn) => (
                 <a
                   key={btn.label}
@@ -1834,7 +1737,6 @@ export default function TVCPropertyMap() {
                     cursor: "pointer",
                     marginBottom: 6,
                     textAlign: "left",
-                    transition: "all 0.15s",
                     fontFamily: "DM Sans",
                     textDecoration: "none",
                   }}
