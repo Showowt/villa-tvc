@@ -43,6 +43,7 @@ interface CloudbedsReservation {
 
 // Villa name mapping from Cloudbeds room names to TVC villa IDs
 const VILLA_MAPPING: Record<string, string> = {
+  // Specific room names
   "Villa ADUANA (Azul/Blue)": "villa_aduana",
   "Villa Coches": "villa_coches",
   "Villa Merced (Morada/Purple)": "villa_merced",
@@ -53,6 +54,15 @@ const VILLA_MAPPING: Record<string, string> = {
   "Villa TERESA (Amarilla/Yellow)": "villa_teresa",
   "Villa TRINIDAD (Durazno/Peach)": "villa_trinidad",
   "FUL(1)": "full_house",
+  // Room type fallbacks (used when specific room not assigned)
+  "Deluxe Tiny Villa": "villa_unassigned",
+  "Deluxe Tiny Villa (Last Deal Breakfast & Transfers included)":
+    "villa_unassigned",
+  "Double Villa (Handicap Accesible)": "villa_unassigned",
+  "Full House": "full_house",
+  "Garden View Tiny  Villa": "villa_unassigned",
+  "Garden View Tiny  Villa (Early year deal Breakfast & Transfer included)":
+    "villa_unassigned",
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -363,8 +373,11 @@ export async function syncReservations(batchSize = 20): Promise<SyncResult> {
         const roomName = assigned?.roomName;
         const roomTypeName = assigned?.roomTypeName;
 
-        // Map room name to villa ID
-        const villaId = roomName ? VILLA_MAPPING[roomName] : undefined;
+        // Map room name to villa ID (try room name first, then room type)
+        const villaId =
+          (roomName && VILLA_MAPPING[roomName]) ||
+          (roomTypeName && VILLA_MAPPING[roomTypeName]) ||
+          undefined;
 
         if (!villaId) {
           console.warn(
