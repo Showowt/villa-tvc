@@ -7,6 +7,15 @@
   "functions": {
     "src/app/api/whatsapp/webhook/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/cloudbeds/sync/route.ts": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cloudbeds/sync",
+      "schedule": "0 */2 * * *"
+    }
+  ]
 }
