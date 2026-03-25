@@ -25,6 +25,9 @@ interface VillaBooking {
   special_requests?: string;
   vip_level?: "standard" | "vip" | "vvip";
   notes?: string;
+  arrival_time?: string;
+  boat_preference?: "3pm" | "6:30pm" | "private" | "other";
+  cleaning_deadline?: string;
 }
 
 interface VillaStatus {
@@ -177,6 +180,37 @@ const VIP_BADGES = {
   vvip: { bg: "bg-amber-500", text: "VVIP" },
 };
 
+// Helper to calculate cleaning deadline urgency
+function getCleaningDeadlineStatus(deadline: string | undefined): {
+  urgency: "normal" | "warning" | "critical" | "overdue" | null;
+  countdown: string | null;
+} {
+  if (!deadline) return { urgency: null, countdown: null };
+
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffMs = deadlineDate.getTime() - now.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 0) {
+    const overdueMins = Math.abs(diffMinutes);
+    const hours = Math.floor(overdueMins / 60);
+    const mins = overdueMins % 60;
+    return {
+      urgency: "overdue",
+      countdown: hours > 0 ? `-${hours}h${mins}m` : `-${mins}m`,
+    };
+  } else if (diffMinutes <= 30) {
+    return { urgency: "critical", countdown: `${diffMinutes}m` };
+  } else if (diffMinutes <= 60) {
+    return { urgency: "warning", countdown: `${diffMinutes}m` };
+  } else {
+    const hours = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    return { urgency: "normal", countdown: `${hours}h${mins}m` };
+  }
+}
+
 export default function VillaMapPage() {
   const [villaStatuses, setVillaStatuses] = useState<{
     [key: string]: VillaStatus;
@@ -188,6 +222,35 @@ export default function VillaMapPage() {
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showAddGuestModal, setShowAddGuestModal] = useState(false);
   const [moveHistory, setMoveHistory] = useState<VillaMove[]>([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [villaHistory, setVillaHistory] = useState<{
+    recent_guests: Array<{
+      id: string;
+      guest_name: string;
+      guest_country?: string;
+      check_in: string;
+      check_out: string;
+      vip_level?: string;
+    }>;
+    maintenance_reports: Array<{
+      id: string;
+      title: string;
+      priority: string;
+      status: string;
+      created_at: string;
+    }>;
+    cleaning_checklists: Array<{
+      id: string;
+      type: string;
+      date: string;
+      status: string;
+      quality_score?: number;
+    }>;
+    patterns: string[];
+  } | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // New guest form
   const [newGuest, setNewGuest] = useState<{
@@ -201,6 +264,8 @@ export default function VillaMapPage() {
     check_out: string;
     special_requests: string;
     vip_level: "standard" | "vip" | "vvip";
+    arrival_time: string;
+    boat_preference: "3pm" | "6:30pm" | "private" | "other";
   }>({
     guest_name: "",
     guest_email: "",
@@ -214,6 +279,8 @@ export default function VillaMapPage() {
       .split("T")[0],
     special_requests: "",
     vip_level: "standard",
+    arrival_time: "15:00",
+    boat_preference: "3pm",
   });
 
   const loadData = useCallback(async () => {
@@ -236,7 +303,7 @@ export default function VillaMapPage() {
     // Load active bookings (checked_in or confirmed with today's date)
     const { data: bookingData } = await supabase
       .from("villa_bookings")
-      .select("*")
+      .select("*, arrival_time, boat_preference, cleaning_deadline")
       .in("status", ["confirmed", "checked_in"])
       .lte("check_in", today)
       .gte("check_out", today);
@@ -247,6 +314,42 @@ export default function VillaMapPage() {
         bookingMap[b.villa_id] = b;
       });
       setBookings(bookingMap);
+    }
+
+    // Also load upcoming arrivals today (for cleaning deadline tracking)
+    const { data: arrivalsData } = await supabase
+      .from("villa_bookings")
+      .select("villa_id, cleaning_deadline, guest_name, arrival_time")
+      .eq("check_in", today)
+      .eq("status", "confirmed");
+
+    if (arrivalsData) {
+      // Merge cleaning deadline info into bookings map for villas awaiting arrival
+      arrivalsData.forEach(
+        (arrival: {
+          villa_id: string;
+          cleaning_deadline?: string;
+          guest_name: string;
+          arrival_time?: string;
+        }) => {
+          if (!bookingMap[arrival.villa_id]) {
+            // Create a minimal booking entry for villas being cleaned for arrivals
+            bookingMap[arrival.villa_id] = {
+              id: "",
+              villa_id: arrival.villa_id,
+              guest_name: arrival.guest_name,
+              num_adults: 0,
+              num_children: 0,
+              check_in: today,
+              check_out: today,
+              status: "confirmed",
+              cleaning_deadline: arrival.cleaning_deadline,
+              arrival_time: arrival.arrival_time,
+            } as VillaBooking;
+          }
+        },
+      );
+      setBookings({ ...bookingMap });
     }
 
     // Load recent move history
@@ -438,8 +541,56 @@ export default function VillaMapPage() {
         .split("T")[0],
       special_requests: "",
       vip_level: "standard",
+      arrival_time: "15:00",
+      boat_preference: "3pm",
     });
     loadData();
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedVilla || !cancellationReason) return;
+    const booking = bookings[selectedVilla.id];
+    if (!booking) return;
+
+    try {
+      const response = await fetch("/api/booking/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: booking.id,
+          cancellation_reason: cancellationReason,
+          cancelled_by: "Admin",
+        }),
+      });
+
+      if (response.ok) {
+        setShowCancelModal(false);
+        setCancellationReason("");
+        setSelectedVilla(null);
+        loadData();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Error cancelling booking");
+      }
+    } catch (error) {
+      console.error("[cancelBooking]", error);
+      alert("Error cancelling booking");
+    }
+  };
+
+  const loadVillaHistory = async (villaId: string) => {
+    setLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/villa/history?villa_id=${villaId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVillaHistory(data);
+        setShowHistoryModal(true);
+      }
+    } catch (error) {
+      console.error("[loadVillaHistory]", error);
+    }
+    setLoadingHistory(false);
   };
 
   const handleStatusChange = async (
@@ -576,6 +727,9 @@ export default function VillaMapPage() {
             const vipBadge = booking?.vip_level
               ? VIP_BADGES[booking.vip_level]
               : null;
+            const deadlineStatus = getCleaningDeadlineStatus(
+              booking?.cleaning_deadline,
+            );
 
             return (
               <button
@@ -585,6 +739,12 @@ export default function VillaMapPage() {
                   isSelected
                     ? "ring-4 ring-blue-500 ring-opacity-50 shadow-xl scale-105"
                     : ""
+                } ${
+                  deadlineStatus.urgency === "overdue"
+                    ? "ring-2 ring-red-500 animate-pulse"
+                    : deadlineStatus.urgency === "critical"
+                      ? "ring-2 ring-red-400"
+                      : ""
                 }`}
                 style={{
                   left: `${villa.position.x}%`,
@@ -613,6 +773,24 @@ export default function VillaMapPage() {
                       {booking.guest_name.split(" ")[0]}
                     </div>
                   )}
+
+                  {/* Cleaning deadline indicator */}
+                  {status?.status === "cleaning" &&
+                    deadlineStatus.countdown && (
+                      <div
+                        className={`text-[8px] font-bold px-1 rounded ${
+                          deadlineStatus.urgency === "overdue"
+                            ? "bg-red-500 text-white"
+                            : deadlineStatus.urgency === "critical"
+                              ? "bg-red-100 text-red-600"
+                              : deadlineStatus.urgency === "warning"
+                                ? "bg-amber-100 text-amber-600"
+                                : "bg-emerald-100 text-emerald-600"
+                        }`}
+                      >
+                        {deadlineStatus.countdown}
+                      </div>
+                    )}
 
                   {/* VIP badge */}
                   {vipBadge && (
@@ -772,13 +950,78 @@ export default function VillaMapPage() {
                       >
                         🔄 Mover
                       </button>
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        className="px-4 py-2 bg-slate-500 text-white rounded-lg text-sm font-bold hover:bg-slate-600"
+                      >
+                        ❌ Cancelar
+                      </button>
                     </>
                   )}
+                  <button
+                    onClick={() => loadVillaHistory(selectedVilla.id)}
+                    disabled={loadingHistory}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-bold hover:bg-purple-600 disabled:opacity-50"
+                  >
+                    {loadingHistory ? "..." : "📜 Historial"}
+                  </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="bg-slate-50 rounded-xl p-4 mb-4 text-center">
+              {/* Show cleaning deadline if villa is in cleaning status with upcoming arrival */}
+              {villaStatuses[selectedVilla.id]?.status === "cleaning" &&
+                bookings[selectedVilla.id]?.cleaning_deadline && (
+                  <div className="mb-4">
+                    {(() => {
+                      const ds = getCleaningDeadlineStatus(
+                        bookings[selectedVilla.id]?.cleaning_deadline,
+                      );
+                      return (
+                        <div
+                          className={`p-3 rounded-lg ${
+                            ds.urgency === "overdue"
+                              ? "bg-red-100 border border-red-300"
+                              : ds.urgency === "critical"
+                                ? "bg-red-50 border border-red-200"
+                                : ds.urgency === "warning"
+                                  ? "bg-amber-50 border border-amber-200"
+                                  : "bg-emerald-50 border border-emerald-200"
+                          }`}
+                        >
+                          <div className="text-xs text-slate-500 mb-1">
+                            Deadline de Limpieza
+                          </div>
+                          <div
+                            className={`text-xl font-mono font-bold ${
+                              ds.urgency === "overdue"
+                                ? "text-red-600"
+                                : ds.urgency === "critical"
+                                  ? "text-red-500"
+                                  : ds.urgency === "warning"
+                                    ? "text-amber-500"
+                                    : "text-emerald-500"
+                            }`}
+                          >
+                            {ds.countdown}
+                          </div>
+                          {bookings[selectedVilla.id]?.guest_name && (
+                            <div className="text-xs text-slate-500 mt-1">
+                              Proximo huesped:{" "}
+                              {bookings[selectedVilla.id].guest_name}
+                            </div>
+                          )}
+                          {ds.urgency === "overdue" && (
+                            <div className="text-xs text-red-600 font-bold mt-2 animate-pulse">
+                              ATRASADO - Escalar a gerencia
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               <p className="text-slate-500 mb-3">
                 No hay huésped en esta villa
               </p>
@@ -975,6 +1218,46 @@ export default function VillaMapPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hora de Llegada
+                  </label>
+                  <input
+                    type="time"
+                    value={newGuest.arrival_time}
+                    onChange={(e) =>
+                      setNewGuest({ ...newGuest, arrival_time: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Bote de Llegada
+                  </label>
+                  <select
+                    value={newGuest.boat_preference}
+                    onChange={(e) =>
+                      setNewGuest({
+                        ...newGuest,
+                        boat_preference: e.target.value as
+                          | "3pm"
+                          | "6:30pm"
+                          | "private"
+                          | "other",
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  >
+                    <option value="3pm">Bote 3:00 PM</option>
+                    <option value="6:30pm">Bote 6:30 PM</option>
+                    <option value="private">Bote Privado</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Nivel VIP
@@ -1028,6 +1311,236 @@ export default function VillaMapPage() {
               >
                 ✅ Registrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Booking Modal */}
+      {showCancelModal && selectedVilla && bookings[selectedVilla.id] && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4 text-rose-600">
+              ❌ Cancelar Reserva
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Esta accion cancelara la reserva de{" "}
+              <span className="font-bold">
+                {bookings[selectedVilla.id].guest_name}
+              </span>{" "}
+              y liberara {selectedVilla.name} para nuevas reservas.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Razon de cancelacion *
+              </label>
+              <select
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg mb-2"
+              >
+                <option value="">Seleccionar razon...</option>
+                <option value="guest_request">Solicitud del huesped</option>
+                <option value="no_show">No se presento</option>
+                <option value="payment_issue">Problema de pago</option>
+                <option value="emergency">Emergencia</option>
+                <option value="overbooking">Overbooking</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason("");
+                }}
+                className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium"
+              >
+                Volver
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={!cancellationReason}
+                className="flex-1 px-4 py-2 bg-rose-500 text-white rounded-lg font-bold hover:bg-rose-600 disabled:opacity-50"
+              >
+                Confirmar Cancelacion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Villa History Modal */}
+      {showHistoryModal && selectedVilla && villaHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold">
+                📜 Historial de {selectedVilla.name}
+              </h3>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Patterns/Insights */}
+            {villaHistory.patterns.length > 0 && (
+              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-bold text-purple-700 text-sm mb-2">
+                  Patrones Detectados
+                </h4>
+                <ul className="space-y-1">
+                  {villaHistory.patterns.map((pattern, i) => (
+                    <li key={i} className="text-sm text-purple-600">
+                      {pattern}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Recent Guests */}
+            <div className="mb-4">
+              <h4 className="font-bold text-slate-700 text-sm mb-2">
+                Ultimos 10 Huespedes
+              </h4>
+              {villaHistory.recent_guests.length > 0 ? (
+                <div className="space-y-2">
+                  {villaHistory.recent_guests.map((guest) => (
+                    <div
+                      key={guest.id}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded-lg text-sm"
+                    >
+                      <div>
+                        <span className="font-medium">{guest.guest_name}</span>
+                        {guest.guest_country && (
+                          <span className="text-slate-500 ml-2">
+                            ({guest.guest_country})
+                          </span>
+                        )}
+                        {guest.vip_level && guest.vip_level !== "standard" && (
+                          <Badge
+                            color={
+                              guest.vip_level === "vvip" ? "#F59E0B" : "#8B5CF6"
+                            }
+                          >
+                            {guest.vip_level.toUpperCase()}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-slate-400 text-xs">
+                        {new Date(guest.check_in).toLocaleDateString("es-CO")} -{" "}
+                        {new Date(guest.check_out).toLocaleDateString("es-CO")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm">
+                  Sin historial de huespedes
+                </p>
+              )}
+            </div>
+
+            {/* Maintenance Reports */}
+            <div className="mb-4">
+              <h4 className="font-bold text-slate-700 text-sm mb-2">
+                Ultimos 5 Reportes de Mantenimiento
+              </h4>
+              {villaHistory.maintenance_reports.length > 0 ? (
+                <div className="space-y-2">
+                  {villaHistory.maintenance_reports.map((report) => (
+                    <div
+                      key={report.id}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded-lg text-sm"
+                    >
+                      <div>
+                        <span className="font-medium">{report.title}</span>
+                        <Badge
+                          color={
+                            report.priority === "urgent"
+                              ? "#EF4444"
+                              : report.priority === "high"
+                                ? "#F59E0B"
+                                : "#6B7280"
+                          }
+                        >
+                          {report.priority}
+                        </Badge>
+                      </div>
+                      <Badge
+                        color={
+                          report.status === "completed"
+                            ? "#10B981"
+                            : report.status === "pending"
+                              ? "#F59E0B"
+                              : "#6B7280"
+                        }
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm">
+                  Sin reportes de mantenimiento
+                </p>
+              )}
+            </div>
+
+            {/* Cleaning Checklists */}
+            <div>
+              <h4 className="font-bold text-slate-700 text-sm mb-2">
+                Ultimos 10 Checklists de Limpieza
+              </h4>
+              {villaHistory.cleaning_checklists.length > 0 ? (
+                <div className="space-y-2">
+                  {villaHistory.cleaning_checklists.map((checklist) => (
+                    <div
+                      key={checklist.id}
+                      className="flex items-center justify-between bg-slate-50 p-2 rounded-lg text-sm"
+                    >
+                      <div>
+                        <span className="font-medium">
+                          {checklist.type.replace(/_/g, " ")}
+                        </span>
+                        {checklist.quality_score && (
+                          <span className="ml-2 text-amber-500">
+                            {"★".repeat(checklist.quality_score)}
+                            {"☆".repeat(5 - checklist.quality_score)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          color={
+                            checklist.status === "approved"
+                              ? "#10B981"
+                              : checklist.status === "rejected"
+                                ? "#EF4444"
+                                : "#6B7280"
+                          }
+                        >
+                          {checklist.status}
+                        </Badge>
+                        <span className="text-slate-400 text-xs">
+                          {new Date(checklist.date).toLocaleDateString("es-CO")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm">
+                  Sin checklists de limpieza
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -8,11 +8,40 @@ import {
   onGuestCheckout,
   onGuestMoved,
 } from "@/lib/operations-hub";
+import {
+  statusChangeSchema,
+  validateApiRequest,
+  validateOverbooking,
+  guestSchemaWithDateValidation,
+} from "@/lib/validation";
+import { z } from "zod";
+
+// Schema for assign_guest action
+const assignGuestSchema = z.object({
+  action: z.literal("assign_guest"),
+  villaNumber: z.number().int().min(1).max(10),
+  guest: guestSchemaWithDateValidation,
+  assignedBy: z.string().optional(),
+  maxGuests: z.number().int().min(1).max(20).optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action } = body;
+
+    // Basic action validation
+    const baseValidation = validateApiRequest(statusChangeSchema, body);
+    if (!baseValidation.success) {
+      return NextResponse.json(
+        {
+          error: "Datos de solicitud inválidos",
+          details: baseValidation.details,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { action } = baseValidation.data;
     const supabase = createServerClient();
 
     switch (action) {
@@ -74,7 +103,37 @@ export async function POST(req: NextRequest) {
       }
 
       case "assign_guest": {
-        const { villaNumber, guest, assignedBy } = body;
+        // Validate guest assignment data
+        const guestValidation = assignGuestSchema.safeParse(body);
+        if (!guestValidation.success) {
+          return NextResponse.json(
+            {
+              error: "Datos de huésped inválidos",
+              details: guestValidation.error.errors.map(
+                (e) => `${e.path.join(" > ")}: ${e.message}`,
+              ),
+            },
+            { status: 400 },
+          );
+        }
+
+        const { villaNumber, guest, assignedBy, maxGuests } =
+          guestValidation.data;
+
+        // Validate overbooking if maxGuests is provided
+        if (maxGuests) {
+          const overbookingCheck = validateOverbooking(guest.guests, maxGuests);
+          if (!overbookingCheck.valid) {
+            return NextResponse.json(
+              {
+                error: overbookingCheck.error,
+                field: "guests",
+              },
+              { status: 400 },
+            );
+          }
+        }
+
         const result = await onGuestAssigned(villaNumber, guest, assignedBy);
         return NextResponse.json({ success: true, ...result });
       }
