@@ -1,15 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createServerClient } from "@/lib/supabase/client";
+import { z } from "zod";
+import {
+  dateSchema,
+  taskDepartment,
+  validateApiRequest,
+} from "@/lib/validation";
+
+// Schema for task generation request
+const taskGenerateSchema = z.object({
+  date: dateSchema.optional(),
+  department: taskDepartment.optional(),
+  occupancy: z.number().int().min(0).max(100).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { date, department, occupancy } = body as {
-      date?: string;
-      department?: string;
-      occupancy?: number;
-    };
+
+    // Validate request body
+    const validation = validateApiRequest(taskGenerateSchema, body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "Datos de solicitud inválidos",
+          details: validation.details,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { date, department, occupancy } = validation.data;
 
     const targetDate = date || new Date().toISOString().split("T")[0];
 
@@ -58,6 +81,46 @@ export async function POST(request: NextRequest) {
       .lte("check_in", targetDate)
       .eq("status", "confirmed");
 
+    // Issue #42: Get on-shift staff for task assignment
+    const { data: onShiftSchedules } = await supabase
+      .from("staff_schedule")
+      .select(
+        `
+        user_id,
+        shift,
+        users (
+          id,
+          name,
+          department
+        )
+      `,
+      )
+      .eq("date", targetDate)
+      .neq("is_day_off", true);
+
+    // Map on-shift staff by department
+    const onShiftByDepartment: Record<
+      string,
+      Array<{ id: string; name: string }>
+    > = {};
+    const allOnShiftIds: string[] = [];
+
+    for (const schedule of onShiftSchedules || []) {
+      const user = schedule.users as {
+        id: string;
+        name: string;
+        department: string | null;
+      } | null;
+      if (!user) continue;
+
+      const dept = user.department || "general";
+      if (!onShiftByDepartment[dept]) {
+        onShiftByDepartment[dept] = [];
+      }
+      onShiftByDepartment[dept].push({ id: user.id, name: user.name });
+      allOnShiftIds.push(user.id);
+    }
+
     // Build context for Claude
     const context = {
       date: targetDate,
@@ -83,6 +146,7 @@ export async function POST(request: NextRequest) {
         interests: r.interests,
         guests: r.guests_count,
       })),
+      onShiftStaff: onShiftByDepartment,
     };
 
     // Check if Anthropic API key is configured
@@ -92,8 +156,9 @@ export async function POST(request: NextRequest) {
         success: true,
         generated_at: new Date().toISOString(),
         ai_powered: false,
-        tasks: generateBasicTasks(context, department),
+        tasks: generateBasicTasks(context, department, onShiftByDepartment),
         context,
+        onShiftStaff: onShiftByDepartment,
       });
     }
 
@@ -101,39 +166,45 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `Eres el asistente de operaciones de TVC (Tiny Village Cartagena), un resort de lujo en Tierra Bomba.
 
-Tu trabajo es generar una lista de tareas prioritarias para el día basándote en:
-- Ocupación actual y movimientos de huéspedes
+Tu trabajo es generar una lista de tareas prioritarias para el dia basandote en:
+- Ocupacion actual y movimientos de huespedes
 - Stock bajo de ingredientes
-- Preferencias de los huéspedes
-- Día de la semana (mantenimiento específico)
+- Preferencias de los huespedes
+- Dia de la semana (mantenimiento especifico)
+- Personal disponible (solo asignar a staff que esta de turno hoy)
 
 REGLAS:
-1. Genera entre 5-10 tareas específicas y accionables
+1. Genera entre 5-10 tareas especificas y accionables
 2. Prioriza por urgencia (Alta, Media, Baja)
 3. Asigna a un departamento (kitchen, housekeeping, maintenance, pool, front_desk)
-4. Incluye estimado de tiempo
-5. Responde SOLO en JSON válido
+4. SOLO asigna tareas a personal que esta de turno segun onShiftStaff
+5. Incluye estimado de tiempo
+6. Responde SOLO en JSON valido
 
 FORMATO DE RESPUESTA (JSON):
 {
   "tasks": [
     {
-      "title": "Título de la tarea",
-      "description": "Descripción detallada",
+      "title": "Titulo de la tarea",
+      "description": "Descripcion detallada",
       "priority": "alta|media|baja",
       "department": "kitchen|housekeeping|maintenance|pool|front_desk",
+      "assigned_to": "nombre del staff asignado (si hay alguien de turno)",
+      "assigned_to_id": "id del staff asignado (si aplica)",
       "estimated_minutes": 30,
-      "reason": "Por qué esta tarea es necesaria hoy"
+      "reason": "Por que esta tarea es necesaria hoy"
     }
   ],
-  "summary": "Resumen de 1-2 oraciones del día"
+  "summary": "Resumen de 1-2 oraciones del dia"
 }`;
 
-    const userPrompt = `Genera las tareas para hoy basándote en este contexto:
+    const userPrompt = `Genera las tareas para hoy basandote en este contexto:
 
 ${JSON.stringify(context, null, 2)}
 
-${department ? `FILTRAR SOLO PARA DEPARTAMENTO: ${department}` : "Incluir todos los departamentos"}`;
+${department ? `FILTRAR SOLO PARA DEPARTAMENTO: ${department}` : "Incluir todos los departamentos"}
+
+IMPORTANTE: Solo asignar tareas a personal que aparece en onShiftStaff. Si no hay nadie de turno para un departamento, marcar assigned_to como null.`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -165,9 +236,10 @@ ${department ? `FILTRAR SOLO PARA DEPARTAMENTO: ${department}` : "Incluir todos 
         success: true,
         generated_at: new Date().toISOString(),
         ai_powered: false,
-        tasks: generateBasicTasks(context, department),
+        tasks: generateBasicTasks(context, department, onShiftByDepartment),
         context,
         parse_error: "AI response parsing failed",
+        onShiftStaff: onShiftByDepartment,
       });
     }
 
@@ -177,6 +249,7 @@ ${department ? `FILTRAR SOLO PARA DEPARTAMENTO: ${department}` : "Incluir todos 
       ai_powered: true,
       ...tasks,
       context,
+      onShiftStaff: onShiftByDepartment,
     });
   } catch (error) {
     console.error("[tasks/generate]", error);
@@ -196,8 +269,17 @@ function generateBasicTasks(
     lowStock: { item: string; category: string }[];
   },
   department?: string,
+  onShiftByDepartment?: Record<string, Array<{ id: string; name: string }>>,
 ) {
   const tasks = [];
+
+  // Helper to get assigned staff for department
+  const getAssignedStaff = (dept: string) => {
+    const staff = onShiftByDepartment?.[dept]?.[0];
+    return staff
+      ? { assigned_to: staff.name, assigned_to_id: staff.id }
+      : { assigned_to: null, assigned_to_id: null };
+  };
 
   // Check-in preparation
   if (context.occupancy.checkIns > 0) {
@@ -207,8 +289,9 @@ function generateBasicTasks(
         "Verificar villas limpias, amenities completos, bebida de bienvenida lista",
       priority: "alta",
       department: "housekeeping",
+      ...getAssignedStaff("housekeeping"),
       estimated_minutes: 45,
-      reason: `${context.occupancy.checkIns} huéspedes llegando hoy`,
+      reason: `${context.occupancy.checkIns} huespedes llegando hoy`,
     });
   }
 
@@ -217,11 +300,12 @@ function generateBasicTasks(
     tasks.push({
       title: `Procesar ${context.occupancy.checkOuts} check-out(s)`,
       description:
-        "Inspección de villa, inventario de minibar, limpieza profunda",
+        "Inspeccion de villa, inventario de minibar, limpieza profunda",
       priority: "alta",
       department: "housekeeping",
+      ...getAssignedStaff("housekeeping"),
       estimated_minutes: 60,
-      reason: `${context.occupancy.checkOuts} huéspedes saliendo hoy`,
+      reason: `${context.occupancy.checkOuts} huespedes saliendo hoy`,
     });
   }
 
@@ -230,23 +314,25 @@ function generateBasicTasks(
     const categories = [...new Set(context.lowStock.map((i) => i.category))];
     tasks.push({
       title: `Revisar stock bajo (${context.lowStock.length} items)`,
-      description: `Categorías afectadas: ${categories.join(", ")}. Items: ${context.lowStock
+      description: `Categorias afectadas: ${categories.join(", ")}. Items: ${context.lowStock
         .slice(0, 5)
         .map((i) => i.item)
         .join(", ")}`,
       priority: "media",
       department: "kitchen",
+      ...getAssignedStaff("kitchen"),
       estimated_minutes: 30,
-      reason: `${context.lowStock.length} ingredientes por debajo del mínimo`,
+      reason: `${context.lowStock.length} ingredientes por debajo del minimo`,
     });
   }
 
   // Daily pool check
   tasks.push({
-    title: "Revisión de piscina - mañana",
-    description: "Verificar químicos, limpiar filtros, preparar área de deck",
+    title: "Revision de piscina - manana",
+    description: "Verificar quimicos, limpiar filtros, preparar area de deck",
     priority: "alta",
     department: "pool",
+    ...getAssignedStaff("pool"),
     estimated_minutes: 30,
     reason: "Mantenimiento diario obligatorio",
   });
@@ -254,10 +340,11 @@ function generateBasicTasks(
   // Guest count based kitchen prep
   if (context.occupancy.guests > 0) {
     tasks.push({
-      title: `Preparación cocina para ${context.occupancy.guests} huéspedes`,
-      description: "Mise en place para desayuno, verificar inventario del día",
+      title: `Preparacion cocina para ${context.occupancy.guests} huespedes`,
+      description: "Mise en place para desayuno, verificar inventario del dia",
       priority: "alta",
       department: "kitchen",
+      ...getAssignedStaff("kitchen"),
       estimated_minutes: 45,
       reason: `${context.occupancy.guests} personas para alimentar hoy`,
     });
@@ -289,7 +376,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     // Get pending checklists
-    let checklistQuery = supabase
+    const checklistQuery = supabase
       .from("checklists")
       .select("*")
       .eq("date", date)
@@ -297,12 +384,44 @@ export async function GET(request: NextRequest) {
 
     const { data: checklists } = await checklistQuery;
 
+    // Issue #42: Get on-shift staff
+    const { data: onShiftSchedules } = await supabase
+      .from("staff_schedule")
+      .select(
+        `
+        user_id,
+        shift,
+        users (
+          id,
+          name,
+          department
+        )
+      `,
+      )
+      .eq("date", date)
+      .neq("is_day_off", true);
+
+    const onShiftStaff = (onShiftSchedules || []).map((s) => {
+      const user = s.users as {
+        id: string;
+        name: string;
+        department: string | null;
+      } | null;
+      return {
+        userId: user?.id,
+        name: user?.name,
+        department: user?.department,
+        shift: s.shift,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       date,
       occupancy: occupancy || { guests_count: 0 },
       pending_checklists: checklists?.length || 0,
       checklists,
+      onShiftStaff,
     });
   } catch (error) {
     console.error("[tasks/generate GET]", error);

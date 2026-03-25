@@ -15,6 +15,23 @@ interface DashboardStats {
   staffQuestionsPerDay: number;
   weeklyFoodProfit: number;
   weeklyTransport: number;
+  npsScore: number | null;
+  totalFeedback: number;
+  // New: Waste and staff meal tracking
+  dailyWasteCost: number;
+  dailyStaffMealCost: number;
+  wasteByReason: { reason: string; cost: number; count: number }[];
+}
+
+interface WeatherDay {
+  date: string;
+  temp_max: number;
+  temp_min: number;
+  description_es: string;
+  icon: string;
+  rain_probability: number;
+  is_good_for_excursions: boolean;
+  excursion_warning: string | null;
 }
 
 const FEATURES = [
@@ -55,16 +72,52 @@ const FEATURES = [
     href: "/ops/revenue",
   },
   {
+    icon: "📈",
+    title: "Financial Dashboard",
+    desc: "RevPAR, margins, historical comparisons",
+    href: "/ops/financials",
+  },
+  {
+    icon: "🧾",
+    title: "Receipt Logging",
+    desc: "Log actual costs, track variances",
+    href: "/ops/receipts",
+  },
+  {
+    icon: "💵",
+    title: "Deposit Tracking",
+    desc: "Guest deposits and invoice status",
+    href: "/ops/deposits",
+  },
+  {
+    icon: "📊",
+    title: "Weekly Reports",
+    desc: "Auto-generated weekly summaries",
+    href: "/ops/reports",
+  },
+  {
     icon: "🌐",
     title: "Welcome Guide",
     desc: "Guest welcome information",
     href: "/ops/welcome-guide",
   },
   {
-    icon: "📊",
+    icon: "📋",
     title: "Requirements",
     desc: "Module status tracker",
     href: "/ops/requirements",
+  },
+  {
+    icon: "🍽️",
+    title: "Villa Menu QR",
+    desc: "In-villa ordering system",
+    href: "/menu/villa1",
+  },
+  {
+    icon: "📉",
+    title: "Consumption Analytics",
+    desc: "Patterns by nationality, day, time",
+    href: "/ops/analytics",
   },
 ];
 
@@ -94,12 +147,19 @@ export default function OpsOverviewPage() {
     staffQuestionsPerDay: 0,
     weeklyFoodProfit: 0,
     weeklyTransport: 0,
+    npsScore: null,
+    totalFeedback: 0,
+    dailyWasteCost: 0,
+    dailyStaffMealCost: 0,
+    wasteByReason: [],
   });
+  const [weather, setWeather] = useState<WeatherDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [configError, setConfigError] = useState(false);
 
   useEffect(() => {
     loadStats();
+    loadWeather();
   }, []);
 
   const loadStats = async () => {
@@ -167,6 +227,66 @@ export default function OpsOverviewPage() {
         }
       }
 
+      // Get NPS score from feedback
+      const { data: feedback } = await supabase
+        .from("guest_feedback")
+        .select("nps_score")
+        .not("nps_score", "is", null);
+
+      let npsScore: number | null = null;
+      if (feedback && feedback.length > 0) {
+        const promoters = feedback.filter(
+          (f) => (f.nps_score as number) >= 9,
+        ).length;
+        const detractors = feedback.filter(
+          (f) => (f.nps_score as number) <= 6,
+        ).length;
+        npsScore = Math.round(
+          ((promoters - detractors) / feedback.length) * 100,
+        );
+      }
+
+      // Get today's waste logs
+      const { data: wasteData } = await supabase
+        .from("waste_logs")
+        .select("cost, reason")
+        .gte("logged_at", `${today}T00:00:00`);
+
+      let dailyWasteCost = 0;
+      const wasteByReasonMap: Record<string, { cost: number; count: number }> =
+        {};
+
+      if (wasteData) {
+        for (const w of wasteData) {
+          dailyWasteCost += w.cost || 0;
+          const reason = w.reason || "other";
+          if (!wasteByReasonMap[reason]) {
+            wasteByReasonMap[reason] = { cost: 0, count: 0 };
+          }
+          wasteByReasonMap[reason].cost += w.cost || 0;
+          wasteByReasonMap[reason].count += 1;
+        }
+      }
+
+      const wasteByReason = Object.entries(wasteByReasonMap).map(
+        ([reason, data]) => ({
+          reason,
+          cost: data.cost,
+          count: data.count,
+        }),
+      );
+
+      // Get today's staff meal costs
+      const { data: staffMeals } = await supabase
+        .from("order_logs")
+        .select("total_price")
+        .eq("order_date", today)
+        .or("is_staff_meal.eq.true,order_category.eq.staff");
+
+      const dailyStaffMealCost = staffMeals
+        ? staffMeals.reduce((sum, m) => sum + (m.total_price || 0) * 0.35, 0)
+        : 0;
+
       setStats({
         todayGuests: occupancy?.guests_count || 0,
         pendingApprovals: pendingApprovals || 0,
@@ -174,11 +294,28 @@ export default function OpsOverviewPage() {
         staffQuestionsPerDay: Math.round((conversationCount || 0) / 7),
         weeklyFoodProfit: weeklyProfit,
         weeklyTransport: weeklyTransport,
+        npsScore,
+        totalFeedback: feedback?.length || 0,
+        dailyWasteCost,
+        dailyStaffMealCost,
+        wasteByReason,
       });
     } catch (error) {
       console.error("[loadStats]", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWeather = async () => {
+    try {
+      const response = await fetch("/api/weather");
+      const data = await response.json();
+      if (data.success) {
+        setWeather(data.forecast || []);
+      }
+    } catch (error) {
+      console.error("[loadWeather]", error);
     }
   };
 
@@ -242,7 +379,80 @@ export default function OpsOverviewPage() {
           color="#EF4444"
           icon="📱"
         />
+        <StatCard
+          label="Guest NPS Score"
+          value={
+            stats.npsScore !== null
+              ? `${stats.npsScore > 0 ? "+" : ""}${stats.npsScore}`
+              : "N/A"
+          }
+          sub={`${stats.totalFeedback} responses`}
+          color={
+            stats.npsScore !== null
+              ? stats.npsScore >= 50
+                ? "#10B981"
+                : stats.npsScore >= 0
+                  ? "#F59E0B"
+                  : "#EF4444"
+              : "#6B7280"
+          }
+          icon="⭐"
+        />
       </div>
+
+      {/* Weather Widget */}
+      {weather.length > 0 && (
+        <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-5 mb-5 text-white">
+          <div className="text-[11px] font-bold tracking-widest mb-2 text-white/80">
+            PRONOSTICO CARTAGENA
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {weather.slice(0, 5).map((day, idx) => {
+              const dayName =
+                idx === 0
+                  ? "Hoy"
+                  : new Date(day.date).toLocaleDateString("es-CO", {
+                      weekday: "short",
+                    });
+              return (
+                <div
+                  key={day.date}
+                  className={`text-center p-2 rounded-lg ${!day.is_good_for_excursions ? "bg-red-500/30" : "bg-white/10"}`}
+                >
+                  <div className="text-xs font-medium mb-1">{dayName}</div>
+                  <div className="text-xl mb-1">
+                    {day.icon === "01d" || day.icon === "01n"
+                      ? "☀️"
+                      : day.icon?.includes("02")
+                        ? "⛅"
+                        : day.icon?.includes("03") || day.icon?.includes("04")
+                          ? "☁️"
+                          : day.icon?.includes("09") || day.icon?.includes("10")
+                            ? "🌧️"
+                            : day.icon?.includes("11")
+                              ? "⛈️"
+                              : "☀️"}
+                  </div>
+                  <div className="text-sm font-bold">{day.temp_max}°</div>
+                  <div className="text-[10px] text-white/60">
+                    {day.temp_min}°
+                  </div>
+                  {day.rain_probability > 30 && (
+                    <div className="text-[10px] mt-1 text-sky-200">
+                      💧{day.rain_probability}%
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {weather.some((d) => d.excursion_warning) && (
+            <div className="mt-3 p-2 bg-red-500/30 rounded-lg text-xs">
+              ⚠️ {weather.find((d) => d.excursion_warning)?.excursion_warning}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Alerts Row */}
       {(stats.pendingApprovals > 0 || stats.lowStockCount > 0) && (
