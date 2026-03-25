@@ -43,18 +43,16 @@ interface CloudbedsReservation {
 
 // Villa name mapping from Cloudbeds room names to TVC villa IDs
 const VILLA_MAPPING: Record<string, string> = {
-  "Villa 1": "villa_1",
-  "Villa 2": "villa_2",
-  "Villa 3": "villa_3",
-  "Villa 4": "villa_4",
-  "Villa 5": "villa_5",
-  "Villa 6": "villa_6",
-  "Villa 7": "villa_7",
-  "Villa 8": "villa_8",
-  "Villa 9": "villa_9",
-  "Villa 10": "villa_10",
-  "Villa 11": "villa_11",
-  Casa: "casa",
+  "Villa ADUANA (Azul/Blue)": "villa_aduana",
+  "Villa Coches": "villa_coches",
+  "Villa Merced (Morada/Purple)": "villa_merced",
+  "Villa PAZ (Limón/ Keylime)": "villa_paz",
+  "Villa Pozo (Azulverde/Teal)": "villa_pozo",
+  "Villa San Pedro (Magenta)": "villa_san_pedro",
+  "Villa Santo Domingo (Mint/Menta)": "villa_santo_domingo",
+  "Villa TERESA (Amarilla/Yellow)": "villa_teresa",
+  "Villa TRINIDAD (Durazno/Peach)": "villa_trinidad",
+  "FUL(1)": "full_house",
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -326,24 +324,57 @@ export async function syncReservations(): Promise<SyncResult> {
 
     for (const res of reservations) {
       try {
+        // Fetch reservation details to get room info
+        const detailData = await cloudbedsApi<{
+          data: {
+            assigned?: Array<{
+              roomName: string;
+              roomTypeName: string;
+              adults?: string;
+              children?: string;
+            }>;
+          };
+        }>(`/api/v1.2/getReservation?reservationID=${res.reservationID}`);
+
+        const assigned = detailData.data?.assigned?.[0];
+        const roomName = assigned?.roomName;
+        const roomTypeName = assigned?.roomTypeName;
+
         // Map room name to villa ID
-        const villaId =
-          VILLA_MAPPING[res.roomName] || VILLA_MAPPING[res.roomTypeName];
+        const villaId = roomName ? VILLA_MAPPING[roomName] : undefined;
 
         if (!villaId) {
           console.warn(
-            `[Cloudbeds] Unknown room: ${res.roomName} / ${res.roomTypeName}`,
+            `[Cloudbeds] Unknown room: ${roomName} / ${roomTypeName}`,
           );
           result.errors++;
           continue;
         }
 
+        // Get guest info from detail response
+        const detail = detailData.data as Record<string, unknown>;
+        const guestList = detail.guestList as
+          | Record<
+              string,
+              {
+                guestFirstName?: string;
+                guestLastName?: string;
+                guestEmail?: string;
+                guestPhone?: string;
+              }
+            >
+          | undefined;
+        const mainGuest = guestList
+          ? Object.values(guestList).find((g) => g)
+          : undefined;
+
         // Map Cloudbeds status to TVC status
         let status: "confirmed" | "checked_in" | "checked_out" | "cancelled" =
           "confirmed";
-        if (res.status === "checked_in") status = "checked_in";
-        else if (res.status === "checked_out") status = "checked_out";
-        else if (res.status === "cancelled" || res.status === "no_show")
+        const detailStatus = detail.status as string;
+        if (detailStatus === "checked_in") status = "checked_in";
+        else if (detailStatus === "checked_out") status = "checked_out";
+        else if (detailStatus === "cancelled" || detailStatus === "no_show")
           status = "cancelled";
 
         // Check if booking already exists
@@ -355,16 +386,23 @@ export async function syncReservations(): Promise<SyncResult> {
 
         const bookingData = {
           villa_id: villaId,
-          guest_name: `${res.guestFirstName} ${res.guestLastName}`.trim(),
-          guest_email: res.guestEmail || null,
-          guest_phone: res.guestPhone || null,
-          check_in: res.startDate,
-          check_out: res.endDate,
+          guest_name: mainGuest
+            ? `${mainGuest.guestFirstName || ""} ${mainGuest.guestLastName || ""}`.trim()
+            : (detail.guestName as string) || "Unknown",
+          guest_email:
+            mainGuest?.guestEmail && mainGuest.guestEmail !== "N/A"
+              ? mainGuest.guestEmail
+              : null,
+          guest_phone: mainGuest?.guestPhone || null,
+          check_in: (detail.startDate as string) || res.startDate,
+          check_out: (detail.endDate as string) || res.endDate,
           status,
-          num_adults: res.adults,
-          num_children: res.children,
-          booking_source: res.source || "cloudbeds",
-          notes: res.notes || null,
+          num_adults: parseInt(String(assigned?.adults || res.adults || 1)),
+          num_children: parseInt(
+            String(assigned?.children || res.children || 0),
+          ),
+          booking_source: (detail.source as string) || "cloudbeds",
+          notes: null,
           cloudbeds_reservation_id: res.reservationID,
           cloudbeds_synced_at: new Date().toISOString(),
         };
