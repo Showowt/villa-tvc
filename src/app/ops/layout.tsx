@@ -53,9 +53,9 @@ const NAV_ITEMS = [
     icon: "🔧",
   },
   {
-    key: "villa-map",
-    labelKey: "nav.villa_map",
-    href: "/ops/villa-map",
+    key: "property-map",
+    labelKey: "nav.property_map",
+    href: "/ops/property-map",
     icon: "🗺️",
   },
 ];

@@ -34,7 +34,7 @@ const translations: Record<string, Record<Language, string>> = {
   "nav.housekeeping": { en: "Housekeeping QC", es: "Control Limpieza" },
   "nav.maintenance": { en: "Maintenance QC", es: "Control Mantenimiento" },
   "nav.demo": { en: "Demo Guide", es: "Guía Demo" },
-  "nav.villa_map": { en: "Villa Map", es: "Mapa Villas" },
+  "nav.property_map": { en: "Property Map", es: "Mapa Propiedad" },
 
   // Header
   "header.title": {
