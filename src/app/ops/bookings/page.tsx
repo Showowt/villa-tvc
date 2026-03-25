@@ -43,16 +43,17 @@ interface RefundCalculation {
 }
 
 const VILLA_NAMES: Record<string, string> = {
-  villa_1: "Teresa",
-  villa_2: "Aduana",
-  villa_3: "Trinidad",
-  villa_4: "Paz",
-  villa_5: "San Pedro",
-  villa_6: "San Diego",
-  villa_7: "Coche",
-  villa_8: "Pozo",
-  villa_9: "Santo Domingo",
-  villa_10: "Merced",
+  villa_aduana: "Aduana (Azul)",
+  villa_coches: "Coches",
+  villa_merced: "Merced (Morada)",
+  villa_paz: "Paz (Limón)",
+  villa_pozo: "Pozo (Teal)",
+  villa_san_pedro: "San Pedro (Magenta)",
+  villa_santo_domingo: "Santo Domingo (Mint)",
+  villa_teresa: "Teresa (Amarilla)",
+  villa_trinidad: "Trinidad (Durazno)",
+  villa_unassigned: "Sin Asignar",
+  full_house: "Full House",
 };
 
 const STATUS_CONFIG = {

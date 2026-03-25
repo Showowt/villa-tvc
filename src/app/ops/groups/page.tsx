@@ -54,16 +54,16 @@ interface Toast {
 
 // Villas disponibles (coincide con property-map)
 const VILLAS = [
-  { id: "villa_1", name: "Teresa", maxGuests: 4 },
-  { id: "villa_2", name: "Aduana", maxGuests: 4 },
-  { id: "villa_3", name: "Trinidad", maxGuests: 4 },
-  { id: "villa_4", name: "Paz", maxGuests: 4 },
-  { id: "villa_5", name: "San Pedro", maxGuests: 5 },
-  { id: "villa_6", name: "San Diego", maxGuests: 4 },
-  { id: "villa_7", name: "Coche", maxGuests: 4 },
-  { id: "villa_8", name: "Pozo", maxGuests: 5 },
-  { id: "villa_9", name: "Santo Domingo", maxGuests: 4 },
-  { id: "villa_10", name: "Merced", maxGuests: 4 },
+  { id: "villa_aduana", name: "Aduana (Azul)", maxGuests: 4 },
+  { id: "villa_coches", name: "Coches", maxGuests: 4 },
+  { id: "villa_merced", name: "Merced (Morada)", maxGuests: 4 },
+  { id: "villa_paz", name: "Paz (Limón)", maxGuests: 4 },
+  { id: "villa_pozo", name: "Pozo (Teal)", maxGuests: 5 },
+  { id: "villa_san_pedro", name: "San Pedro (Magenta)", maxGuests: 5 },
+  { id: "villa_santo_domingo", name: "Santo Domingo (Mint)", maxGuests: 4 },
+  { id: "villa_teresa", name: "Teresa (Amarilla)", maxGuests: 4 },
+  { id: "villa_trinidad", name: "Trinidad (Durazno)", maxGuests: 4 },
+  { id: "full_house", name: "Full House", maxGuests: 42 },
 ];
 
 const MAX_PROPERTY_CAPACITY = VILLAS.reduce((sum, v) => sum + v.maxGuests, 0);
