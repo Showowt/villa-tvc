@@ -52,10 +52,25 @@ export async function GET() {
       if (res.roomTypeName) roomNames.add(`TYPE: ${res.roomTypeName}`);
     }
 
+    // Get full details for first reservation to see structure
+    let detailedReservation = null;
+    if (reservations.length > 0) {
+      const detailRes = await fetch(
+        `${CLOUDBEDS_API_BASE}/api/v1.2/getReservation?reservationID=${reservations[0].reservationID}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      detailedReservation = await detailRes.json();
+    }
+
     return NextResponse.json({
       total_reservations: reservations.length,
       unique_room_names: Array.from(roomNames).sort(),
       sample_reservation: reservations[0] || null,
+      detailed_reservation: detailedReservation,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
