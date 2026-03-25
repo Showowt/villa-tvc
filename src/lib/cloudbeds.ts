@@ -300,7 +300,7 @@ interface SyncResult {
   errors: number;
 }
 
-export async function syncReservations(): Promise<SyncResult> {
+export async function syncReservations(batchSize = 20): Promise<SyncResult> {
   const supabase = getServiceClient();
   const result: SyncResult = { synced: 0, created: 0, updated: 0, errors: 0 };
 
@@ -319,11 +319,19 @@ export async function syncReservations(): Promise<SyncResult> {
       `/api/v1.2/getReservations?startDate=${startDate}&endDate=${endDate}&status=confirmed,checked_in,checked_out`,
     );
 
-    const reservations = data.data || [];
-    console.log(`[Cloudbeds] Found ${reservations.length} reservations`);
+    const allReservations = data.data || [];
+    // Process only a batch to avoid timeout - prioritize most recent
+    const reservations = allReservations.slice(0, batchSize);
+    console.log(
+      `[Cloudbeds] Found ${allReservations.length} reservations, processing ${reservations.length}`,
+    );
 
-    for (const res of reservations) {
+    for (let i = 0; i < reservations.length; i++) {
+      const res = reservations[i];
       try {
+        // Small delay between API calls to avoid rate limiting
+        if (i > 0) await new Promise((r) => setTimeout(r, 100));
+
         // Fetch reservation details to get room info
         const detailData = await cloudbedsApi<{
           data: {
