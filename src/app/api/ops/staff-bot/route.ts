@@ -216,14 +216,35 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("[StaffBot API] Error:", errorMessage, error);
+    const errorStack = error instanceof Error ? error.stack : "";
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+
+    console.error("[StaffBot API] Error:", {
+      name: errorName,
+      message: errorMessage,
+      stack: errorStack,
+      error,
+    });
+
+    // Check for specific Anthropic errors
+    let userMessage =
+      "⚠️ Error de conexión. Por favor contacta a Akil directamente: +57 316 055 1387";
+    if (
+      errorMessage.includes("authentication") ||
+      errorMessage.includes("401")
+    ) {
+      userMessage =
+        "⚠️ Error de autenticación del bot. Contacta a soporte técnico.";
+    } else if (errorMessage.includes("rate") || errorMessage.includes("429")) {
+      userMessage =
+        "⚠️ Demasiadas solicitudes. Intenta de nuevo en un momento.";
+    }
 
     return NextResponse.json(
       {
         error: "Failed to generate response",
-        details: errorMessage,
-        response:
-          "⚠️ Error de conexión. Por favor contacta a Akil directamente: +57 316 055 1387",
+        details: `${errorName}: ${errorMessage}`,
+        response: userMessage,
         success: false,
       },
       { status: 500 },
