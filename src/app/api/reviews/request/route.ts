@@ -121,7 +121,11 @@ export async function POST(request: NextRequest) {
 
     // Send WhatsApp message
     try {
-      const messageSid = await sendWhatsAppMessage(guest_phone, message);
+      const result = await sendWhatsAppMessage(guest_phone, message);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send WhatsApp message");
+      }
 
       // Update request status
       await supabase
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
         .update({
           sent_at: new Date().toISOString(),
           sent_via: "whatsapp",
-          message_sid: messageSid,
+          message_sid: result.sid || null,
           status: "sent",
         })
         .eq("id", reviewRequest.id);
@@ -138,7 +142,7 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           id: reviewRequest.id,
-          message_sid: messageSid,
+          message_sid: result.sid,
           sent_at: new Date().toISOString(),
         },
         message: "Review request sent successfully",

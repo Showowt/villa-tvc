@@ -163,7 +163,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Find alternatives if errors
-    let alternatives;
+    let alternatives:
+      | Array<{ id: string; name: string; maxGuests: number; type: string }>
+      | undefined = undefined;
     if (errors.length > 0 && checkIn && checkOut) {
       const altVillas = await findAlternativeVillas(
         guestCount,

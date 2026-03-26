@@ -205,7 +205,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const result = await onGuestAssigned(villaNumber, guest, assignedBy);
+        const result = await onGuestAssigned(
+          villaNumber,
+          guest,
+          assignedBy || "system",
+        );
         return NextResponse.json({ success: true, ...result });
       }
 

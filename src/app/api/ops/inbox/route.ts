@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // API BANDEJA DE ENTRADA UNIFICADA - Issue #59
 // Lista todas las conversaciones ordenadas por último mensaje
+// unified_contacts table not available - uses conversations directly
 // ═══════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
@@ -28,8 +29,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status"); // all, active, escalated, resolved
     const channel = searchParams.get("channel"); // all, whatsapp, web
 
-    // Intentar usar la vista inbox_view primero
-    // Si no existe, hacer query directamente a conversations
+    // Query conversations directly (without unified_contact_id and unread_count)
     let query = supabase.from("conversations").select(`
         id,
         channel,
@@ -43,23 +43,34 @@ export async function GET(request: NextRequest) {
         started_at,
         summary,
         escalated_at,
-        escalation_reason,
-        unified_contact_id,
-        unread_count
+        escalation_reason
       `);
 
     // Filtrar por estado
     if (status && status !== "all") {
       if (status === "escalated") {
         query = query.not("escalated_at", "is", null);
-      } else {
-        query = query.eq("status", status);
+      } else if (
+        status === "active" ||
+        status === "resolved" ||
+        status === "archived"
+      ) {
+        query = query.eq(
+          "status",
+          status as "active" | "resolved" | "archived",
+        );
       }
     }
 
     // Filtrar por canal
     if (channel && channel !== "all") {
-      query = query.eq("channel", channel);
+      if (
+        channel === "whatsapp" ||
+        channel === "web" ||
+        channel === "instagram"
+      ) {
+        query = query.eq("channel", channel);
+      }
     }
 
     // Ordenar por último mensaje
@@ -107,7 +118,7 @@ export async function GET(request: NextRequest) {
 
       if (!contactMap.has(key)) {
         contactMap.set(key, {
-          contact_id: conv.unified_contact_id || conv.id,
+          contact_id: conv.id,
           phone: conv.contact_phone,
           email: conv.contact_email,
           contact_name: conv.contact_name,
@@ -120,7 +131,7 @@ export async function GET(request: NextRequest) {
           latest_conversation_id: conv.id,
           latest_channel: conv.channel,
           conversation_status: conv.status,
-          unread_count: conv.unread_count || 0,
+          unread_count: 0, // Not tracked in current schema
           last_message_preview: conv.summary,
           last_message_at: conv.last_message_at,
           is_escalated: !!conv.escalated_at,
@@ -143,9 +154,6 @@ export async function GET(request: NextRequest) {
         if (!existing.contact_name && conv.contact_name) {
           existing.contact_name = conv.contact_name;
         }
-
-        // Acumular no leídos
-        existing.unread_count += conv.unread_count || 0;
 
         // Verificar si alguna conversación está escalada
         if (conv.escalated_at) {

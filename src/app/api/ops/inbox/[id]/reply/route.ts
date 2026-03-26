@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // API ENVIAR RESPUESTA - Issue #59
 // Envía mensaje a contacto por el canal seleccionado
+// unified_contacts table not available - uses conversations directly
 // ═══════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,7 +11,7 @@ import { isConfigured } from "@/lib/env";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: contactId } = await params;
@@ -21,7 +22,7 @@ export async function POST(
     if (!message || !message.trim()) {
       return NextResponse.json(
         { error: "El mensaje es requerido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,35 +30,23 @@ export async function POST(
     if (!isConfigured("NEXT_PUBLIC_SUPABASE_URL")) {
       return NextResponse.json(
         { error: "Base de datos no configurada" },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
     const supabase = createServerClient();
 
-    // Obtener información del contacto
+    // Obtener información del contacto desde conversación
     let contactPhone: string | null = null;
 
-    // Intentar obtener de unified_contacts primero
-    const { data: unifiedContact } = await supabase
-      .from("unified_contacts")
-      .select("phone, name")
-      .eq("id", contactId)
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("contact_phone")
+      .eq("id", conversationId || contactId)
       .single();
 
-    if (unifiedContact) {
-      contactPhone = unifiedContact.phone;
-    } else {
-      // Buscar en conversación
-      const { data: conv } = await supabase
-        .from("conversations")
-        .select("contact_phone")
-        .eq("id", conversationId || contactId)
-        .single();
-
-      if (conv) {
-        contactPhone = conv.contact_phone;
-      }
+    if (conv) {
+      contactPhone = conv.contact_phone;
     }
 
     // Enviar mensaje según el canal
@@ -65,7 +54,7 @@ export async function POST(
       if (!contactPhone) {
         return NextResponse.json(
           { error: "No se encontró número de teléfono para WhatsApp" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -73,7 +62,7 @@ export async function POST(
       if (!isConfigured("TWILIO_ACCOUNT_SID")) {
         return NextResponse.json(
           { error: "WhatsApp no configurado" },
-          { status: 503 }
+          { status: 503 },
         );
       }
 
@@ -85,7 +74,7 @@ export async function POST(
         console.error("[Reply API] WhatsApp error:", result.error);
         return NextResponse.json(
           { error: `Error al enviar WhatsApp: ${result.error}` },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
@@ -99,7 +88,6 @@ export async function POST(
       const { data: existingConv } = await supabase
         .from("conversations")
         .select("id")
-        .eq("unified_contact_id", contactId)
         .eq("channel", channel)
         .eq("status", "active")
         .order("last_message_at", { ascending: false })
@@ -117,7 +105,6 @@ export async function POST(
             contact_type: "guest",
             contact_phone: contactPhone,
             status: "active",
-            unified_contact_id: contactId,
           })
           .select("id")
           .single();
@@ -126,7 +113,7 @@ export async function POST(
           console.error("[Reply API] Error creating conversation:", convError);
           return NextResponse.json(
             { error: "Error al crear conversación" },
-            { status: 500 }
+            { status: 500 },
           );
         }
 
@@ -164,7 +151,7 @@ export async function POST(
     console.error("[Reply API] Error:", error);
     return NextResponse.json(
       { error: "Error al enviar mensaje" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

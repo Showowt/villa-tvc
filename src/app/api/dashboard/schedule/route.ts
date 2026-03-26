@@ -23,7 +23,7 @@ export async function GET() {
         shift_end,
         is_day_off,
         notes,
-        users (
+        users!staff_schedule_user_id_fkey (
           id,
           name,
           department,

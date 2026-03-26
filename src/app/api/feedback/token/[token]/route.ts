@@ -1,5 +1,5 @@
 // ============================================
-// FEEDBACK TOKEN LOOKUP API (Issue #77)
+// FEEDBACK TOKEN LOOKUP API (Issue #77) - SIMPLIFIED
 // Get feedback form data by secure token
 // ============================================
 
@@ -14,56 +14,45 @@ export async function GET(
     const { token } = await context.params;
 
     if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Token required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
     const supabase = createServerClient();
 
-    // Look up feedback by token
+    // Find feedback by token
     const { data: feedback, error } = await supabase
       .from("guest_feedback")
-      .select(
-        `
-        id,
-        guest_name,
-        booking_id,
-        check_out_date,
-        villa_id,
-        overall_rating,
-        submitted_at
-      `,
-      )
-      .eq("review_link_token", token)
+      .select("id, guest_name, villa_id, check_out_date, submitted_at")
+      .eq("token", token)
       .single();
 
     if (error || !feedback) {
       return NextResponse.json(
-        { success: false, error: "Token no valido o expirado" },
+        { error: "Invalid or expired feedback link" },
         { status: 404 },
       );
     }
 
-    // Determine status
-    const status = feedback.submitted_at ? "submitted" : "pending";
+    if (feedback.submitted_at) {
+      return NextResponse.json(
+        { error: "Feedback already submitted" },
+        { status: 400 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: {
+      feedback: {
         id: feedback.id,
         guest_name: feedback.guest_name,
-        booking_id: feedback.booking_id,
-        check_out_date: feedback.check_out_date,
         villa_id: feedback.villa_id,
-        status,
+        check_out_date: feedback.check_out_date,
       },
     });
   } catch (error) {
-    console.error("[Feedback Token API] Error:", error);
+    console.error("[feedback/token] Error:", error);
     return NextResponse.json(
-      { success: false, error: "Error al verificar token" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

@@ -78,24 +78,27 @@ export async function GET(): Promise<
       }
     }
 
-    // Build performance array
-    const performance: StaffPerformance[] = dailyTasks.map((task) => {
-      const user = userMap.get(task.user_id);
-      const completionPct =
-        task.total_count > 0
-          ? Math.round((task.completed_count / task.total_count) * 100)
-          : 0;
+    // Build performance array - filter out tasks without user_id
+    const performance: StaffPerformance[] = dailyTasks
+      .filter((task) => task.user_id !== null)
+      .map((task) => {
+        const userId = task.user_id as string;
+        const user = userMap.get(userId);
+        const totalCount = task.total_count ?? 0;
+        const completedCount = task.completed_count ?? 0;
+        const completionPct =
+          totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-      return {
-        userId: task.user_id,
-        name: user?.name || "Unknown",
-        department: task.department || user?.department || null,
-        tasksCompleted: task.completed_count,
-        tasksTotal: task.total_count,
-        completionPct,
-        checklistsCompleted: checklistCounts.get(task.user_id) || 0,
-      };
-    });
+        return {
+          userId,
+          name: user?.name || "Unknown",
+          department: task.department || user?.department || null,
+          tasksCompleted: completedCount,
+          tasksTotal: totalCount,
+          completionPct,
+          checklistsCompleted: checklistCounts.get(userId) || 0,
+        };
+      });
 
     // Sort by completion percentage
     performance.sort((a, b) => b.completionPct - a.completionPct);

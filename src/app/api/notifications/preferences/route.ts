@@ -1,173 +1,43 @@
 // ============================================
-// TVC NOTIFICATIONS - Preferences API
-// Get/update notification preferences per user
+// NOTIFICATION PREFERENCES API - DISABLED
+// Tables (notification_preferences, push_subscriptions) not in current schema
+// TODO: Re-enable when notification system is implemented
 // ============================================
 
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/client";
 
-// ─── VALIDATION SCHEMA ───
-const updatePrefsSchema = z.object({
-  userId: z.string().uuid(),
-  preferences: z.object({
-    low_stock_enabled: z.boolean().optional(),
-    cleaning_deadline_enabled: z.boolean().optional(),
-    checklist_submitted_enabled: z.boolean().optional(),
-    task_assigned_enabled: z.boolean().optional(),
-    escalation_enabled: z.boolean().optional(),
-    order_placed_enabled: z.boolean().optional(),
-    maintenance_alert_enabled: z.boolean().optional(),
-    quiet_hours_enabled: z.boolean().optional(),
-    quiet_hours_start: z.string().optional(),
-    quiet_hours_end: z.string().optional(),
-    prefer_push: z.boolean().optional(),
-    fallback_to_whatsapp: z.boolean().optional(),
-  }),
-});
-
-// ─── GET: Get user preferences ───
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
 
-    if (!userId) {
-      return NextResponse.json(
-        {
-          error: true,
-          message: "userId es requerido",
-        },
-        { status: 400 },
-      );
-    }
-
-    const supabase = createServerClient();
-
-    // Get preferences
-    const { data: prefs, error } = await supabase
-      .from("notification_preferences")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    if (error && error.code !== "PGRST116") {
-      console.error("[Notifications/Preferences] GET error:", error);
-      return NextResponse.json(
-        {
-          error: true,
-          message: "Error al obtener preferencias",
-        },
-        { status: 500 },
-      );
-    }
-
-    // If no preferences exist, create defaults
-    if (!prefs) {
-      const { data: newPrefs, error: insertError } = await supabase
-        .from("notification_preferences")
-        .insert({ user_id: userId })
-        .select("*")
-        .single();
-
-      if (insertError) {
-        console.error("[Notifications/Preferences] Insert error:", insertError);
-        return NextResponse.json(
-          {
-            error: true,
-            message: "Error al crear preferencias",
-          },
-          { status: 500 },
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        preferences: newPrefs,
-      });
-    }
-
-    // Get subscription count
-    const { count: subscriptionCount } = await supabase
-      .from("push_subscriptions")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("is_active", true);
-
-    return NextResponse.json({
-      success: true,
-      preferences: prefs,
-      activeSubscriptions: subscriptionCount || 0,
-    });
-  } catch (error) {
-    console.error("[Notifications/Preferences] GET error:", error);
-    return NextResponse.json(
-      {
-        error: true,
-        message: "Error interno del servidor",
-      },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    success: true,
+    preferences: {
+      user_id: userId,
+      low_stock_enabled: true,
+      cleaning_deadline_enabled: true,
+      checklist_submitted_enabled: true,
+      task_assigned_enabled: true,
+      escalation_enabled: true,
+      order_placed_enabled: false,
+      maintenance_alert_enabled: true,
+      quiet_hours_enabled: false,
+      quiet_hours_start: "22:00",
+      quiet_hours_end: "07:00",
+      prefer_push: false,
+      fallback_to_whatsapp: true,
+    },
+    activeSubscriptions: 0,
+    message: "Notification preferences disabled - tables not configured",
+  });
 }
 
-// ─── PUT: Update user preferences ───
 export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const validation = updatePrefsSchema.safeParse(body);
+  const body = await request.json().catch(() => ({}));
 
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: true,
-          message: "Datos invalidos",
-          details: validation.error.flatten(),
-        },
-        { status: 400 },
-      );
-    }
-
-    const { userId, preferences } = validation.data;
-    const supabase = createServerClient();
-
-    // Update preferences
-    const { data: updated, error } = await supabase
-      .from("notification_preferences")
-      .upsert({
-        user_id: userId,
-        ...preferences,
-        updated_at: new Date().toISOString(),
-      })
-      .select("*")
-      .single();
-
-    if (error) {
-      console.error("[Notifications/Preferences] Update error:", error);
-      return NextResponse.json(
-        {
-          error: true,
-          message: "Error al actualizar preferencias",
-        },
-        { status: 500 },
-      );
-    }
-
-    console.log(`[Notifications/Preferences] Updated for user ${userId}`);
-
-    return NextResponse.json({
-      success: true,
-      preferences: updated,
-      message: "Preferencias actualizadas",
-    });
-  } catch (error) {
-    console.error("[Notifications/Preferences] PUT error:", error);
-    return NextResponse.json(
-      {
-        error: true,
-        message: "Error interno del servidor",
-      },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    success: true,
+    preferences: body.preferences || {},
+    message: "Notification preferences disabled - tables not configured",
+  });
 }

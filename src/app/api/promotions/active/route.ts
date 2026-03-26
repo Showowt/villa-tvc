@@ -28,9 +28,7 @@ export async function GET() {
     // Obtener fecha y hora actual
     const now = new Date();
     const currentTime = now.toTimeString().split(" ")[0]; // HH:MM:SS
-    const currentDay = now
-      .toLocaleDateString("en-US", { weekday: "long" })
-      .toLowerCase();
+    const currentDayOfWeek = now.getDay(); // 0=Sunday, 1=Monday, etc.
     const currentDate = now.toISOString().split("T")[0];
 
     // Buscar promociones activas
@@ -49,13 +47,13 @@ export async function GET() {
 
     // Filtrar las que estan activas AHORA
     const activeNow = (promotions || []).filter((promo) => {
-      // Verificar fecha de inicio
-      if (promo.start_date && currentDate < promo.start_date) {
+      // Verificar fecha de inicio (valid_from in schema)
+      if (promo.valid_from && currentDate < promo.valid_from) {
         return false;
       }
 
-      // Verificar fecha de fin
-      if (promo.end_date && currentDate > promo.end_date) {
+      // Verificar fecha de fin (valid_until in schema)
+      if (promo.valid_until && currentDate > promo.valid_until) {
         return false;
       }
 
@@ -66,9 +64,9 @@ export async function GET() {
         }
       }
 
-      // Verificar dia de la semana
-      if (promo.days_active && promo.days_active.length > 0) {
-        if (!promo.days_active.includes(currentDay)) {
+      // Verificar dia de la semana (days_of_week in schema - array of day numbers)
+      if (promo.days_of_week && promo.days_of_week.length > 0) {
+        if (!promo.days_of_week.includes(currentDayOfWeek)) {
           return false;
         }
       }
@@ -83,10 +81,10 @@ export async function GET() {
       name_es: p.name_es,
       description: p.description,
       description_es: p.description_es,
-      discount_type: p.discount_type,
+      discount_type: p.discount_type as "percentage" | "fixed" | "bogo",
       discount_value: p.discount_value,
-      applicable_categories: p.applicable_categories || [],
-      applicable_items: p.applicable_items || [],
+      applicable_categories: p.category_filter || [],
+      applicable_items: [],
       start_time: p.start_time,
       end_time: p.end_time,
     }));
@@ -148,9 +146,7 @@ export async function POST(request: Request) {
       // Buscar promocion aplicable
       const now = new Date();
       const currentTime = now.toTimeString().split(" ")[0];
-      const currentDay = now
-        .toLocaleDateString("en-US", { weekday: "long" })
-        .toLowerCase();
+      const currentDayOfWeek = now.getDay();
       const currentDate = now.toISOString().split("T")[0];
 
       const { data: promos } = await supabase
@@ -158,14 +154,14 @@ export async function POST(request: Request) {
         .select("*")
         .eq("is_active", true)
         .or(
-          `applicable_categories.cs.{${menuItem.category}},applicable_items.cs.{${menuItemId}}`,
+          `category_filter.cs.{${menuItem.category}},item_filter.cs.{${menuItemId}}`,
         );
 
       // Encontrar la primera promocion aplicable
       promotion = (promos || []).find((p) => {
         // Verificar fechas
-        if (p.start_date && currentDate < p.start_date) return false;
-        if (p.end_date && currentDate > p.end_date) return false;
+        if (p.valid_from && currentDate < p.valid_from) return false;
+        if (p.valid_until && currentDate > p.valid_until) return false;
 
         // Verificar horario
         if (p.start_time && p.end_time) {
@@ -174,8 +170,8 @@ export async function POST(request: Request) {
         }
 
         // Verificar dia
-        if (p.days_active && p.days_active.length > 0) {
-          if (!p.days_active.includes(currentDay)) return false;
+        if (p.days_of_week && p.days_of_week.length > 0) {
+          if (!p.days_of_week.includes(currentDayOfWeek)) return false;
         }
 
         return true;

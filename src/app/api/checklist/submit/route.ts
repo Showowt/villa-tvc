@@ -57,29 +57,12 @@ export async function POST(request: NextRequest) {
     const completionRate = totalItems > 0 ? completedItems / totalItems : 0;
 
     if (checklist_id) {
-      // Get the checklist to know its type and track first item timing
+      // Get the checklist to know its type and track timing
       const { data: existingChecklist } = await supabase
         .from("checklists")
-        .select("type, villa_id, started_at, first_item_at, items")
+        .select("type, villa_id, started_at, items")
         .eq("id", checklist_id)
         .single();
-
-      // Determine if this is the first item being completed
-      let firstItemAt = existingChecklist?.first_item_at;
-      if (!firstItemAt && completedItems > 0) {
-        // Check if any items were just completed
-        interface ChecklistItemType {
-          completed?: boolean;
-        }
-        const previousItems = existingChecklist?.items as unknown as
-          | ChecklistItemType[]
-          | null;
-        const previouslyCompleted =
-          previousItems?.filter((i) => i.completed).length || 0;
-        if (completedItems > previouslyCompleted) {
-          firstItemAt = now;
-        }
-      }
 
       // Calculate actual duration from started_at if available
       let calculatedDuration = duration_minutes;
@@ -107,7 +90,6 @@ export async function POST(request: NextRequest) {
           completed_by: completionRate === 1 ? completed_by : null,
           completed_at: completionRate === 1 ? now : null,
           submitted_at: completionRate === 1 ? now : null,
-          first_item_at: firstItemAt || null,
           notes: notes || null,
           duration_minutes: calculatedDuration || null,
           photos: photos ? (photos as unknown as Json) : null,
@@ -202,7 +184,6 @@ export async function POST(request: NextRequest) {
           completed: completedItems,
           completion_rate: Math.round(completionRate * 100),
           duration_minutes: calculatedDuration || null,
-          first_item_at: firstItemAt || null,
         },
         supply_consumption: supplyConsumption,
         message:

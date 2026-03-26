@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
-import { z } from "zod";
+import type { Json } from "@/types/database";
 
 const CARTAGENA_LAT = 10.3932;
 const CARTAGENA_LON = -75.4832;
@@ -30,6 +30,29 @@ interface WeatherDay {
   sunset: string;
   is_good_for_excursions: boolean;
   excursion_warning: string | null;
+}
+
+// Convert WeatherDay to Json-compatible type
+function toJsonCompatible(day: WeatherDay): Json {
+  return {
+    date: day.date,
+    temp_min: day.temp_min,
+    temp_max: day.temp_max,
+    feels_like: day.feels_like,
+    humidity: day.humidity,
+    description: day.description,
+    description_es: day.description_es,
+    icon: day.icon,
+    wind_speed: day.wind_speed,
+    wind_direction: day.wind_direction,
+    rain_probability: day.rain_probability,
+    rain_mm: day.rain_mm,
+    uv_index: day.uv_index,
+    sunrise: day.sunrise,
+    sunset: day.sunset,
+    is_good_for_excursions: day.is_good_for_excursions,
+    excursion_warning: day.excursion_warning ?? undefined,
+  };
 }
 
 // Fetch from OpenWeatherMap
@@ -187,7 +210,7 @@ export async function GET(request: NextRequest) {
         {
           location: "cartagena",
           forecast_date: day.date,
-          data: day,
+          data: toJsonCompatible(day),
           fetched_at: new Date().toISOString(),
           expires_at: new Date(
             Date.now() + CACHE_HOURS * 60 * 60 * 1000,
@@ -231,7 +254,7 @@ export async function POST() {
       supabase.from("weather_cache").insert({
         location: "cartagena",
         forecast_date: day.date,
-        data: day,
+        data: toJsonCompatible(day),
         fetched_at: new Date().toISOString(),
         expires_at: new Date(
           Date.now() + CACHE_HOURS * 60 * 60 * 1000,

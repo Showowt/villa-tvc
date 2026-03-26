@@ -164,11 +164,13 @@ export async function GET(req: NextRequest) {
         ).length,
         staffTasks: (staffPerf || []).map((s) => ({
           department: s.department,
-          completed: s.completed_count,
-          total: s.total_count,
+          completed: s.completed_count ?? 0,
+          total: s.total_count ?? 0,
           pct:
-            s.total_count > 0
-              ? Math.round((s.completed_count / s.total_count) * 100)
+            (s.total_count ?? 0) > 0
+              ? Math.round(
+                  ((s.completed_count ?? 0) / (s.total_count ?? 1)) * 100,
+                )
               : 0,
         })),
         conversationsToday: (todayConvos || []).length,

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  // Set turbopack root to avoid workspace detection issues
   turbopack: {
     root: path.resolve(__dirname),
   },

@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database";
 
-interface ServiceWithUpsell extends Tables<"services"> {
-  upsell_day?: number;
-  upsell_priority?: number;
-}
+// Type for services with upsell fields
+type ServiceWithUpsell = Tables<"services">;
 
 // Calculate days into stay
 function calculateDaysIntoStay(checkInDate: string): number {

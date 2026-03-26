@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         `
         user_id,
         shift,
-        users (
+        users!staff_schedule_user_id_fkey (
           id,
           name,
           department
@@ -391,7 +391,7 @@ export async function GET(request: NextRequest) {
         `
         user_id,
         shift,
-        users (
+        users!staff_schedule_user_id_fkey (
           id,
           name,
           department

@@ -29,14 +29,6 @@ interface StaffStats {
   rejected_count: number;
 }
 
-interface SupplyConsumption {
-  checklist_type: string;
-  villa_id: string | null;
-  total_events: number;
-  total_cost: number;
-  avg_cost_per_clean: number;
-}
-
 // GET /api/analytics/cleaning - Get cleaning analytics
 export async function GET(request: NextRequest) {
   try {
@@ -61,9 +53,7 @@ export async function GET(request: NextRequest) {
         type,
         villa_id,
         started_at,
-        first_item_at,
         completed_at,
-        submitted_at,
         duration_minutes,
         assigned_to,
         quality_score,
@@ -72,17 +62,13 @@ export async function GET(request: NextRequest) {
       `,
       )
       .in("status", ["complete", "approved"])
-      .gte("completed_at", startDateStr)
-      .like("type", "villa_%");
+      .gte("completed_at", startDateStr);
 
     if (staffId) {
       checklistQuery = checklistQuery.eq("assigned_to", staffId);
     }
     if (villaId) {
       checklistQuery = checklistQuery.eq("villa_id", villaId);
-    }
-    if (checklistType) {
-      checklistQuery = checklistQuery.eq("type", checklistType);
     }
 
     const { data: checklists, error: checklistError } = await checklistQuery;
@@ -103,9 +89,9 @@ export async function GET(request: NextRequest) {
     const staffStatsMap: Map<string, StaffStats> = new Map();
 
     for (const checklist of checklists || []) {
-      const type = checklist.type;
-      const duration = checklist.duration_minutes || 0;
-      const quality = checklist.quality_score;
+      const type = checklist.type as string;
+      const duration = (checklist.duration_minutes as number) || 0;
+      const quality = checklist.quality_score as number | null;
 
       // Aggregate by type
       if (!cleaningStatsByType[type]) {
@@ -218,49 +204,6 @@ export async function GET(request: NextRequest) {
       staffStats.push(stats);
     }
 
-    // Get supply consumption data
-    let consumptionQuery = supabase
-      .from("supply_consumption_logs")
-      .select("*")
-      .gte("consumed_at", startDateStr);
-
-    if (villaId) {
-      consumptionQuery = consumptionQuery.eq("villa_id", villaId);
-    }
-    if (checklistType) {
-      consumptionQuery = consumptionQuery.eq("checklist_type", checklistType);
-    }
-
-    const { data: consumptionLogs } = await consumptionQuery;
-
-    // Aggregate consumption by type and villa
-    const consumptionByTypeVilla: Map<string, SupplyConsumption> = new Map();
-    for (const log of consumptionLogs || []) {
-      const key = `${log.checklist_type}_${log.villa_id || "all"}`;
-      if (!consumptionByTypeVilla.has(key)) {
-        consumptionByTypeVilla.set(key, {
-          checklist_type: log.checklist_type,
-          villa_id: log.villa_id,
-          total_events: 0,
-          total_cost: 0,
-          avg_cost_per_clean: 0,
-        });
-      }
-      const stats = consumptionByTypeVilla.get(key)!;
-      stats.total_events++;
-      stats.total_cost += log.total_cost || 0;
-    }
-
-    const supplyConsumption: SupplyConsumption[] = [];
-    for (const [, stats] of consumptionByTypeVilla) {
-      if (stats.total_events > 0) {
-        stats.avg_cost_per_clean = Math.round(
-          stats.total_cost / stats.total_events,
-        );
-      }
-      supplyConsumption.push(stats);
-    }
-
     // Calculate overall summary
     const totalCleanings = Object.values(cleaningStatsByType).reduce(
       (sum, s) => sum + s.total_cleanings,
@@ -275,10 +218,6 @@ export async function GET(request: NextRequest) {
             ) / totalCleanings,
           )
         : 0;
-    const totalSupplyCost = supplyConsumption.reduce(
-      (sum, s) => sum + s.total_cost,
-      0,
-    );
 
     // Generate insights
     const insights: string[] = [];
@@ -302,31 +241,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Most expensive villa to clean
-    const sortedByCost = [...supplyConsumption].sort(
-      (a, b) => b.avg_cost_per_clean - a.avg_cost_per_clean,
-    );
-    if (sortedByCost.length > 0 && sortedByCost[0].villa_id) {
-      insights.push(
-        `Highest supply cost: ${sortedByCost[0].villa_id} ($${sortedByCost[0].avg_cost_per_clean.toLocaleString()} avg)`,
-      );
-    }
-
     return NextResponse.json({
       success: true,
       period_days: periodDays,
       summary: {
         total_cleanings: totalCleanings,
         avg_duration_minutes: avgDurationAll,
-        total_supply_cost: totalSupplyCost,
-        avg_supply_cost_per_clean:
-          totalCleanings > 0 ? Math.round(totalSupplyCost / totalCleanings) : 0,
+        total_supply_cost: 0,
+        avg_supply_cost_per_clean: 0,
       },
       by_type: Object.values(cleaningStatsByType),
       by_staff: staffStats.sort(
         (a, b) => b.total_cleanings - a.total_cleanings,
       ),
-      supply_consumption: supplyConsumption,
+      supply_consumption: [],
       insights,
     });
   } catch (error) {
@@ -363,12 +291,12 @@ export async function POST(request: NextRequest) {
     const countByType: Record<string, number> = {};
 
     for (const checklist of historicalData || []) {
-      const type = checklist.type;
+      const type = checklist.type as string;
       if (!avgTimeByType[type]) {
         avgTimeByType[type] = 0;
         countByType[type] = 0;
       }
-      avgTimeByType[type] += checklist.duration_minutes || 0;
+      avgTimeByType[type] += (checklist.duration_minutes as number) || 0;
       countByType[type]++;
     }
 
@@ -411,9 +339,9 @@ export async function POST(request: NextRequest) {
     };
 
     for (const day of occupancyData || []) {
-      const checkIns = day.check_ins || 0;
-      const checkOuts = day.check_outs || 0;
-      const occupied = day.guests_count || 0;
+      const checkIns = (day.check_ins as number) || 0;
+      const checkOuts = (day.check_outs as number) || 0;
+      const occupied = (day.guests_count as number) || 0;
       const villasOccupied =
         (day.villas_occupied as string[] | null)?.length ||
         Math.ceil(occupied / 2);

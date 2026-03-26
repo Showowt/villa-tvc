@@ -28,7 +28,7 @@ interface Recipe {
   quantity: number;
   unit: string;
   notes: string | null;
-  is_optional: boolean;
+  is_optional: boolean | null;
   ingredient?: Ingredient;
 }
 

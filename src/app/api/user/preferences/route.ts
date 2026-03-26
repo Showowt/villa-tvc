@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// TVC USER PREFERENCES API - Issue #10
-// Guardar/cargar preferencias de usuario incluyendo shortcuts
+// TVC USER PREFERENCES API - STUBBED
+// The `preferences` column doesn't exist in the users table
+// TODO: Add preferences column or separate user_preferences table
 // ═══════════════════════════════════════════════════════════════
 
 import { createServerClient } from "@/lib/supabase/client";
@@ -12,6 +13,28 @@ interface UserPreferences {
   theme: "light" | "dark" | "system";
   language: "es" | "en";
   notifications_enabled: boolean;
+}
+
+// Default quick actions by department
+function getDefaultQuickActions(department: string | null): string[] {
+  switch (department) {
+    case "kitchen":
+      return ["/staff/pos", "/staff/inventory", "/staff/kitchen"];
+    case "housekeeping":
+      return ["/staff/checklist", "/staff/tasks", "/staff/linen"];
+    case "maintenance":
+      return [
+        "/staff/tasks",
+        "/staff/checklist",
+        "/ops/preventive-maintenance",
+      ];
+    case "pool":
+      return ["/staff/checklist", "/staff/tasks", "/staff/services"];
+    case "front_desk":
+      return ["/staff/tasks", "/staff/services", "/ops/booking-bot"];
+    default:
+      return ["/staff/tasks", "/staff/checklist", "/staff/inventory"];
+  }
 }
 
 // GET - Obtener preferencias del usuario
@@ -42,12 +65,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener perfil y preferencias
+    // Obtener perfil básico (sin campo preferences que no existe)
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select(
-        "id, name, email, role, department, default_landing_page, preferences",
-      )
+      .select("id, name, email, role, department")
       .eq("auth_id", user.id)
       .single();
 
@@ -58,25 +79,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Parsear preferencias (puede ser JSON o null)
+    // Return default preferences since the preferences column doesn't exist
     const preferences: UserPreferences = {
-      default_landing_page: profile.default_landing_page,
-      quick_actions:
-        ((profile.preferences as Record<string, unknown>)
-          ?.quick_actions as string[]) ||
-        getDefaultQuickActions(profile.department),
-      theme:
-        ((profile.preferences as Record<string, unknown>)?.theme as
-          | "light"
-          | "dark"
-          | "system") || "dark",
-      language:
-        ((profile.preferences as Record<string, unknown>)?.language as
-          | "es"
-          | "en") || "es",
-      notifications_enabled:
-        ((profile.preferences as Record<string, unknown>)
-          ?.notifications_enabled as boolean) ?? true,
+      default_landing_page: null,
+      quick_actions: getDefaultQuickActions(profile.department),
+      theme: "dark",
+      language: "es",
+      notifications_enabled: true,
     };
 
     return NextResponse.json({
@@ -91,6 +100,7 @@ export async function GET(request: NextRequest) {
         preferences,
       },
       error: null,
+      message: "Preferences returned from defaults - column not configured",
     });
   } catch (error) {
     console.error("[UserPreferences] GET error:", error);
@@ -101,7 +111,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH - Actualizar preferencias
+// PATCH - Actualizar preferencias (stubbed - no-op)
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = createServerClient();
@@ -128,61 +138,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Parsear body
-    const body = await request.json();
-    const {
-      default_landing_page,
-      quick_actions,
-      theme,
-      language,
-      notifications_enabled,
-    } = body;
-
-    // Obtener perfil actual
-    const { data: currentProfile } = await supabase
-      .from("users")
-      .select("preferences")
-      .eq("auth_id", user.id)
-      .single();
-
-    // Merge con preferencias existentes
-    const currentPrefs =
-      (currentProfile?.preferences as Record<string, unknown>) || {};
-    const updatedPreferences = {
-      ...currentPrefs,
-      ...(quick_actions !== undefined && { quick_actions }),
-      ...(theme !== undefined && { theme }),
-      ...(language !== undefined && { language }),
-      ...(notifications_enabled !== undefined && { notifications_enabled }),
-    };
-
-    // Actualizar usuario
-    const updateData: Record<string, unknown> = {
-      preferences: updatedPreferences,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Solo actualizar default_landing_page si se proporciona
-    if (default_landing_page !== undefined) {
-      updateData.default_landing_page = default_landing_page;
-    }
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("auth_id", user.id);
-
-    if (updateError) {
-      console.error("[UserPreferences] Update error:", updateError);
-      return NextResponse.json(
-        { error: "Error al guardar preferencias", data: null },
-        { status: 500 },
-      );
-    }
+    // Parse body but don't save (preferences column doesn't exist)
+    await request.json();
 
     return NextResponse.json({
-      data: { message: "Preferencias actualizadas" },
+      data: { message: "Preferencias no guardadas - columna no configurada" },
       error: null,
+      warning:
+        "Preferences column not in schema - changes not persisted. Add 'preferences JSONB' to users table.",
     });
   } catch (error) {
     console.error("[UserPreferences] PATCH error:", error);
@@ -190,27 +153,5 @@ export async function PATCH(request: NextRequest) {
       { error: "Error interno", data: null },
       { status: 500 },
     );
-  }
-}
-
-// Acciones rapidas por defecto segun departamento
-function getDefaultQuickActions(department: string | null): string[] {
-  switch (department) {
-    case "kitchen":
-      return ["/staff/pos", "/staff/inventory", "/staff/kitchen"];
-    case "housekeeping":
-      return ["/staff/checklist", "/staff/tasks", "/staff/linen"];
-    case "maintenance":
-      return [
-        "/staff/tasks",
-        "/staff/checklist",
-        "/ops/preventive-maintenance",
-      ];
-    case "pool":
-      return ["/staff/checklist", "/staff/tasks", "/staff/services"];
-    case "front_desk":
-      return ["/staff/tasks", "/staff/services", "/ops/booking-bot"];
-    default:
-      return ["/staff/tasks", "/staff/checklist", "/staff/inventory"];
   }
 }

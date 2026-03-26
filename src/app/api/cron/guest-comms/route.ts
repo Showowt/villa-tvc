@@ -224,7 +224,7 @@ async function scheduleNewCommunications(
       .limit(5);
 
     if (weather) {
-      weatherForecast = weather.map((w) => w.data as WeatherDay);
+      weatherForecast = weather.map((w) => w.data as unknown as WeatherDay);
     }
   } catch {
     console.log("[GuestComms] Weather data unavailable");
@@ -436,7 +436,7 @@ async function sendScheduledCommunications(
       .limit(5);
 
     if (weather) {
-      weatherForecast = weather.map((w) => w.data as WeatherDay);
+      weatherForecast = weather.map((w) => w.data as unknown as WeatherDay);
     }
   } catch {
     console.log(
@@ -641,13 +641,14 @@ async function scheduleSpecialOccasionMessages(
       guest_name: string;
     } | null;
   })[]) {
-    if (!occasion.reservations?.guest_phone) continue;
+    if (!occasion.reservations?.guest_phone || !occasion.reservation_id)
+      continue;
 
     // Check if already scheduled
     const { data: existing } = await supabase
       .from("guest_communications")
       .select("id")
-      .eq("reservation_id", occasion.reservation_id)
+      .eq("reservation_id", occasion.reservation_id as string)
       .eq("communication_type", "special_occasion")
       .in("status", ["scheduled", "sent"])
       .single();
@@ -907,7 +908,7 @@ export async function POST(request: Request) {
       const finalMessage = replaceTemplateVariables(messageTemplate, variables);
 
       const sendResult = await sendWhatsAppMessage(
-        reservation.guest_phone,
+        reservation.guest_phone as string,
         finalMessage,
       );
 

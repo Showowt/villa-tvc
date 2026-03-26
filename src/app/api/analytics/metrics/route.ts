@@ -108,15 +108,21 @@ export async function GET(request: Request) {
       .order("date", { ascending: true });
 
     // Calculate totals
-    const totals = calculateTotals(currentMetrics || []);
-    const previousTotals = calculateTotals(previousMetrics || []);
+    const totals = calculateTotals(
+      (currentMetrics || []) as unknown as DailyMetric[],
+    );
+    const previousTotals = calculateTotals(
+      (previousMetrics || []) as unknown as DailyMetric[],
+    );
 
     // Calculate averages
-    const averages = calculateAverages(currentMetrics || []);
+    const averages = calculateAverages(
+      (currentMetrics || []) as unknown as DailyMetric[],
+    );
 
     // Build comparison data
     const comparison = buildComparison(totals, previousTotals, averages, {
-      ...calculateAverages(previousMetrics || []),
+      ...calculateAverages((previousMetrics || []) as unknown as DailyMetric[]),
     });
 
     const response: MetricsResponse = {
@@ -128,7 +134,7 @@ export async function GET(request: Request) {
       totals,
       averages,
       comparison,
-      daily: (currentMetrics || []) as DailyMetric[],
+      daily: (currentMetrics || []) as unknown as DailyMetric[],
     };
 
     return NextResponse.json(response);
